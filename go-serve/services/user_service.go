@@ -23,6 +23,7 @@ type UserService interface {
 	Authenticate(username, password string) (string, *models.User, error)
 	GenerateToken(u *models.User) (string, error)
 	GetProfile(userID uint) (*models.User, error)
+	UpdatePassword(userID uint, oldPassword, newPassword string) error
 }
 
 // userService 实现 UserService，聚合仓储。
@@ -148,4 +149,37 @@ func (s *userService) GetProfile(userID uint) (*models.User, error) {
 	}
 	u.Password = "" // 绝不返回密码哈希
 	return u, nil
+}
+
+// UpdatePassword 修改密码业务逻辑：
+// 1. 查出当前用户（需要旧的哈希密码用于校验）
+// 2. 验证旧密码是否正确
+// 3. 检查新密码与旧密码不能相同
+// 4. 对新密码哈希后写入数据库
+func (s *userService) UpdatePassword(userID uint, oldPassword, newPassword string) error {
+	// 第一步：从数据库查出当前用户，拿到旧的哈希密码
+	u, err := s.repo.FindByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// 第二步：用 bcrypt 校验旧密码是否与数据库中的哈希匹配
+	// 如果旧密码输入错误，直接拒绝，防止别人在拿到登录态后乱改密码
+	if !verifyPassword(u.Password, oldPassword) {
+		return errors.New("旧密码错误")
+	}
+
+	// 第三步：新密码不能与旧密码相同
+	if verifyPassword(u.Password, newPassword) {
+		return errors.New("新密码不能与旧密码相同")
+	}
+
+	// 第四步：对新密码进行哈希，绝不明文存库
+	newHashed, err := hashPassword(newPassword)
+	if err != nil {
+		return errors.New("密码加密失败")
+	}
+
+	// 第五步：调用 Repository 将新哈希写入数据库
+	return s.repo.UpdatePassword(userID, newHashed)
 }

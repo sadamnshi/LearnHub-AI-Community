@@ -1,82 +1,90 @@
 package router
 
 import (
-	"errors"
-	"time"
+	"gin_demo/middleware"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 
 	"gin_demo/controllers"
 	"gin_demo/repositories"
 	"gin_demo/services"
 )
 
-// authMiddleware 简单 JWT 校验中间件：
-// 1. 从 Authorization: Bearer <token> 或 Cookie auth_token 读取 token
-// 2. 解析与验证签名及过期
-// 3. 将关键信息（userID, username）放入上下文
-// 企业级增强（未实现但注释说明）：
-// - Token 黑名单（登出/强制失效）
-// - Redis 存储用户会话信息
-// - 角色/权限校验（RBAC/ABAC）
-// - 刷新 Token 流程（Refresh Token 双 Token 模式）
-func authMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 读取 token: 先尝试 Header, 再尝试 Cookie
-		authHeader := c.GetHeader("Authorization")
-		var tokenString string
-		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-			tokenString = authHeader[7:]
-		} else {
-			if cookie, err := c.Cookie("auth_token"); err == nil {
-				tokenString = cookie
-			}
-		}
-		if tokenString == "" {
-			c.AbortWithStatusJSON(401, gin.H{"error": "missing token"})
-			return
-		}
-		// 解析 Token（与 services 中使用的同一秘钥）
-		parsed, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-			// 签名算法校验避免被替换为 none
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("unexpected signing method")
-			}
-			return []byte("CHANGE_ME_TO_ENV_SECRET"), nil
-		})
-		if err != nil || !parsed.Valid {
-			c.AbortWithStatusJSON(401, gin.H{"error": "invalid token"})
-			return
-		}
-		claims, ok := parsed.Claims.(jwt.MapClaims)
-		if !ok {
-			c.AbortWithStatusJSON(401, gin.H{"error": "invalid claims"})
-			return
-		}
-		// 读取关键字段
-		if sub, ok := claims["sub"].(float64); ok {
-			c.Set("userID", int64(sub))
-		}
-		if name, ok := claims["name"].(string); ok {
-			c.Set("username", name)
-		}
-		c.Next()
-	}
-}
+// // authMiddleware 简单 JWT 校验中间件：
+// // 1. 从 Authorization: Bearer <token> 或 Cookie auth_token 读取 token
+// // 2. 解析与验证签名及过期
+// // 3. 将关键信息（userID, username）放入上下文
+// // 企业级增强（未实现但注释说明）：
+// // - Token 黑名单（登出/强制失效）
+// // - Redis 存储用户会话信息
+// // - 角色/权限校验（RBAC/ABAC）
+// // - 刷新 Token 流程（Refresh Token 双 Token 模式）
+// func authMiddleware() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+
+// 		// ── 第一步：从请求头取出 Token 字符串 ──────────────────────────────
+// 		//
+// 		// 前端登录成功后，服务端会返回一个 Token（长得像 "eyJhbGci..."）
+// 		// 前端每次请求受保护接口时，需要在请求头里带上：
+// 		//   Authorization: Bearer eyJhbGci...
+// 		//
+// 		// 这里取出整个 Authorization 头的值，例如 "Bearer eyJhbGci..."
+// 		authHeader := c.GetHeader("Authorization")
+
+// 		// 去掉前面的 "Bearer " 前缀（7个字符），只保留纯 Token 字符串
+// 		tokenString := authHeader[7:]
+
+// 		// ── 第二步：用密钥解析并验证 Token ────────────────────────────────
+// 		//
+// 		// Token 由三部分组成，用 "." 分隔：头部.载荷.签名
+// 		// 例如：eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOjEsIm5hbWUiOiJhZG1pbiJ9.xxxxxx
+// 		//   头部(header)  ：声明算法类型，如 HS256
+// 		//   载荷(payload) ：存放用户信息，如 userID、username、过期时间
+// 		//   签名(signature)：用服务器密钥对前两部分签名，防止被篡改
+// 		//
+// 		// jwt.Parse 会同时做两件事：
+// 		//   1. 解码载荷，取出里面的用户信息
+// 		//   2. 用密钥重新计算签名，与 Token 里的签名比对，不一致则说明 Token 被篡改
+// 		parsed, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+// 			// 返回密钥，必须与 user_service.go 里 GenerateToken 用的密钥完全一致
+// 			// 只有密钥相同，签名验证才能通过
+// 			return []byte("CHANGE_ME_TO_ENV_SECRET"), nil
+// 		})
+
+// 		// 解析失败（Token 格式错误、签名不匹配、已过期等），拒绝请求
+// 		if err != nil || !parsed.Valid {
+// 			c.AbortWithStatusJSON(401, gin.H{"error": "invalid token"})
+// 			return
+// 		}
+
+// 		// ── 第三步：从 Token 载荷中取出用户信息 ──────────────────────────
+// 		//
+// 		// 登录时 user_service.go 里的 GenerateToken 把以下字段写进了 Token：
+// 		//   "sub"  → 用户ID（数字）
+// 		//   "name" → 用户名（字符串）
+// 		//   "exp"  → 过期时间
+// 		//
+// 		// 现在把它们读出来，存入本次请求的上下文，供后续 Controller 直接使用
+// 		claims := parsed.Claims.(jwt.MapClaims)
+
+// 		// "sub" 存的是用户ID，JWT 里数字统一用 float64 存储，需转成 int64
+// 		userID := int64(claims["sub"].(float64))
+// 		username := claims["name"].(string)
+
+// 		// 把用户信息存入上下文，Controller 里可以用 c.GetInt64("userID") 取出
+// 		c.Set("userID", userID)
+// 		c.Set("username", username)
+
+// 		// ── 第四步：验证通过，放行请求 ────────────────────────────────────
+// 		c.Next()
+// 	}
+// }
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
 	// CORS 中间件必须在所有路由注册之前 Use，否则对已注册路由不生效
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8081"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Use(middleware.CorsMiddleware())
 
 	// 依赖注入：repository -> service -> controller
 	userRepo := repositories.NewUserRepository()
@@ -93,12 +101,19 @@ func SetupRouter() *gin.Engine {
 		// 公开接口（无需登录）
 		api.POST("/register", userController.HandleRegisterJSON)
 		api.POST("/login", userController.HandleLoginJSON)
-		api.GET("/posts", postController.GetPosts) // 帖子列表
 
 		// 受保护路由：需要 JWT
-		apiAuth := api.Group("/user").Use(authMiddleware())
+		apiAuth := api.Group("/user").Use(middleware.AuthMiddleware())
 		{
-			apiAuth.GET("/profile", userController.Profile)
+			apiAuth.GET("/profile", userController.ShowProfile)     //个人信息展示
+			apiAuth.PUT("/password", userController.UpdatePassword) // 更新密码
+		}
+		
+		// 帖子路由
+		apiPost := api.Group("/posts")
+		{
+			apiPost.GET("/home", postController.GetPosts)       // 获取帖子列表（分页、筛选）
+			apiPost.GET("/:id", postController.GetPostDetail)   // 获取帖子详情（单个帖子，使用旁路缓存）
 		}
 	}
 

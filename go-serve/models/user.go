@@ -14,11 +14,10 @@ import (
 // 注意：Password 在请求阶段接收的是明文，入库前会替换成哈希值。
 type User struct {
 	gorm.Model
-	Username string `gorm:"uniqueIndex;size:64" form:"username" json:"username" binding:"required"`
-	Password string `gorm:"size:255" form:"password" json:"password" binding:"required"` // 保存 bcrypt 哈希
-    Email    string `gorm:"uniqueIndex;size:128"` // 新增
-    Avatar   string `gorm:"size:512"`              // 头像 URL
-    Bio      string `gorm:"size:500"`              // 个人简介
-    Role     string `gorm:"default:'user'"`        // user | admin | moderator
+	Username string  `gorm:"uniqueIndex;size:64" form:"username" json:"username" binding:"required"`
+	Password string  `gorm:"size:255" form:"password" json:"password" binding:"required"` // 保存 bcrypt 哈希
+	Email    *string `gorm:"uniqueIndex;size:128"`                                        // 新增
+	Avatar   string  `gorm:"size:512"`                                                    // 头像 URL
+	Bio      string  `gorm:"size:500"`                                                    // 个人简介
+	Role     string  `gorm:"default:'user'"`                                              // user | admin | moderator
 }
-

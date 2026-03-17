@@ -10,10 +10,15 @@ type UserRepository interface {
 	Create(user *models.User) error
 	FindByUsername(username string) (*models.User, error)
 	FindByID(id uint) (*models.User, error)
+	UpdatePassword(userID uint, newHashedPassword string) error
 }
 
 // 定义一个结构体实现处理数据库数据的逻辑
 type userRepository struct{}
+
+func NewUserRepository() UserRepository {
+	return &userRepository{}
+}
 
 // 实现gorm插入一条记录到数据库的方法，user为传入的数据信息结构体
 func (r *userRepository) Create(user *models.User) error {
@@ -37,6 +42,7 @@ func (r *userRepository) FindByID(id uint) (*models.User, error) {
 	}
 	return &u, nil
 }
-func NewUserRepository() UserRepository {
-	return &userRepository{}
+
+func (r *userRepository) UpdatePassword(userID uint, newHashedPassword string) error {
+	return databases.DB.Model(&models.User{}).Where("id = ?", userID).Update("password", newHashedPassword).Error
 }

@@ -13,7 +13,7 @@ import (
 func main() {
 	// 1. 初始化数据库并且自动迁移数据库创建数据表
 	databases.InitDatabase()
-
+	databases.InitRedis()
 	// 2. 初始化路由并启动（CORS 已在 SetupRouter 内部配置）
 	r := router.SetupRouter()
 
