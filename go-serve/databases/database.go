@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 创造全局gorm.DB变量
+// 创造全局gorm.DB变量,为了在持久层能够使用DB进行对数据库的操作
 var DB *gorm.DB
 
 // 初始化数据库连接等等
@@ -31,11 +31,6 @@ func getDSN() string {
 	user := getEnv("PG_USER", "postgres")
 	password := getEnv("PG_PASSWORD", "123456")
 	dbname := getEnv("PG_DB", "postgres")
-	fmt.Println("HOST:", host)
-	fmt.Println("PORT:", port)
-	fmt.Println("USER:", user)
-	fmt.Println("PASS:", password)
-	fmt.Println("DBNAME:", dbname)
 
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 }
@@ -53,7 +48,7 @@ func AutoMigrate() {
 		&models.User{},
 		&models.Post{},
 		&models.Category{},
-		&models.Tag{}); err != nil {
+	); err != nil {
 		log.Fatalf("auto migrate failed: %v", err)
 	}
 }
