@@ -177,19 +177,98 @@ func (ctl *PostController) GetPostDetail(c *gin.Context) {
 		return
 	}
 
-	// ═════════════════════════════════════════════════════════════════════════
-	// 第 5 步：返回成功响应
-	// ═════════════════════════════════════════════════════════════════════════
-	// 返回 HTTP 200 状态码，以及统一的 JSON 响应格式
-	// 格式说明：
-	//   {
-	//     "code": 0,          // 业务状态码（0 表示成功）
-	//     "msg": "success",   // 状态描述
-	//     "data": {           // 实际数据
-	//       ...PostDetail 的所有字段
-	//     }
-	//   }
 	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "success",
+		"data": detail,
+	})
+}
+
+func (ctl *PostController) CreatePost(c *gin.Context) {
+	// ═════════════════════════════════════════════════════════════════════════════
+	// 步骤 1️⃣：从上下文获取登录用户的 ID
+	// ═════════════════════════════════════════════════════════════════════════════
+	// AuthMiddleware 中间件会将用户 ID 存入 c.Set("userID", ...)
+	// 这里通过 c.GetInt64("userID") 取出，并转换为 uint
+	userIDInterface, exists := c.Get("userID")
+	if !exists {
+		// 如果上下文中没有 userID，说明中间件验证失败（不应该发生）
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code": 401,
+			"msg":  "未授权，请先登录",
+		})
+		return
+	}
+
+	// 类型断言：userIDInterface 是 int64 类型
+	// int64 → uint：将有符号整数转为无符号整数
+	userID := uint(userIDInterface.(int64))
+
+	// ═════════════════════════════════════════════════════════════════════════════
+	// 步骤 2️⃣：解析请求 JSON 数据
+	// ═════════════════════════════════════════════════════════════════════════════
+	// c.ShouldBindJSON() 会：
+	//   1. 读取请求体
+	//   2. 反序列化 JSON 数据到结构体
+	//   3. 自动验证 binding 标签（required、max、min 等）
+	// 返回值：
+	//   - nil：绑定和验证成功
+	//   - error：绑定或验证失败（会自动返回 400 错误给前端）
+	var req services.CreatePostRequest
+
+	// 关于 ShouldBindJSON 的错误处理：
+	// 如果 ShouldBindJSON 返回错误（比如 JSON 格式错误、验证失败），
+	// Gin 会自动返回 400 错误给前端，但不会中断执行
+	// 所以我们需要手动检查并返回
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// 验证失败，返回 400 Bad Request
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":  400,
+			"msg":   "请求参数格式错误或验证失败",
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// ═════════════════════════════════════════════════════════════════════════════
+	// 步骤 3️⃣：调用服务层创建帖子
+	// ═════════════════════════════════════════════════════════════════════════════
+	// ctl.service.CreatePost() 会：
+	//   1. 进行额外的业务逻辑验证
+	//   2. 构建 Post 数据库模型
+	//   3. 保存到数据库（自动生成 ID、时间戳）
+	//   4. 返回 PostDetail 给前端
+	detail, err := ctl.service.CreatePost(userID, &req)
+
+	// ═════════════════════════════════════════════════════════════════════════════
+	// 步骤 4️⃣：错误处理
+	// ═════════════════════════════════════════════════════════════════════════════
+	if err != nil {
+		// 创建失败，返回 500 Internal Server Error
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":  500,
+			"msg":   "创建帖子失败",
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// ═════════════════════════════════════════════════════════════════════════════
+	// 步骤 5️⃣：返回成功响应
+	// ═════════════════════════════════════════════════════════════════════════════
+	// 返回创建后的帖子详情，前端可以用帖子 ID 跳转到详情页
+	// 示例响应：
+	// {
+	//   "code": 0,
+	//   "msg": "success",
+	//   "data": {
+	//     "id": 123,
+	//     "title": "...",
+	//     "content": "...",
+	//     ...
+	//   }
+	// }
+	c.JSON(http.StatusCreated, gin.H{
 		"code": 0,
 		"msg":  "success",
 		"data": detail,

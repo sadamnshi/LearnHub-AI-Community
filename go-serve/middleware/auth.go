@@ -26,6 +26,18 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 这里取出整个 Authorization 头的值，例如 "Bearer eyJhbGci..."
 		authHeader := c.GetHeader("Authorization")
 
+		// 检查 Authorization 头是否为空
+		if authHeader == "" {
+			c.AbortWithStatusJSON(401, gin.H{"error": "authorization header required"})
+			return
+		}
+
+		// 检查是否以 "Bearer " 开头
+		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+			c.AbortWithStatusJSON(401, gin.H{"error": "invalid authorization header format"})
+			return
+		}
+
 		// 去掉前面的 "Bearer " 前缀（7个字符），只保留纯 Token 字符串
 		tokenString := authHeader[7:]
 

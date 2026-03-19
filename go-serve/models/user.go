@@ -11,7 +11,6 @@ import (
 // 3. 生产环境通常还会添加 Email / Mobile / Status / LastLoginAt 等字段，这里保持最小示例。
 // 4. 若需要软删除能力，gorm.Model 已包含 DeletedAt。
 // 5. 通过 form / json tag 使其能同时绑定表单与 JSON 请求，binding 标签用于基础的必填校验。
-// 注意：Password 在请求阶段接收的是明文，入库前会替换成哈希值。
 type User struct {
 	gorm.Model
 	Username string  `gorm:"uniqueIndex;size:64" form:"username" json:"username" binding:"required"`
