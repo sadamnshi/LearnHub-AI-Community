@@ -120,7 +120,7 @@ export default {
       posts: [],       // 当前页帖子列表
       total: 0,        // 总条数
       page: 1,         // 当前页码
-      pageSize: 20,    // 每页条数
+      pageSize: 5,    // 每页条数
       loading: false,
       error: '',
       defaultAvatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=default',
@@ -197,7 +197,7 @@ export default {
 
     // 跳转帖子详情
     goToPost(id) {
-      this.$router.push(`/post/${id}`)
+      this.$router.push(`/posts/${id}`)
     },
 
     // 退出登录

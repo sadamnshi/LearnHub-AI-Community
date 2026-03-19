@@ -5,20 +5,12 @@ import (
 	"gin_demo/models"
 )
 
-// PostRepository 帖子数据访问接口
-// 这个接口定义了对帖子数据的所有操作方法（增删改查）
-// 作用：为服务层提供统一的数据访问入口，隐藏具体的数据库操作细节
-// 好处：可以方便地更换数据库实现（比如从 PostgreSQL 换成 MySQL），而不影响上层业务逻辑
 type PostRepository interface {
 	// List 分页查询帖子列表，可按分类筛选
-	// 参数说明：
-	//   - page: 页码，从 1 开始（第 1 页、第 2 页...）
-	//   - pageSize: 每页显示多少条数据（比如 20 条）
+	//   - page: 页码
+	//   - pageSize: 每页显示多少条数据
 	//   - categoryID: 分类 ID，如果为 0 表示不按分类筛选（查询所有分类的帖子）
-	// 返回值说明：
-	//   - []models.Post: 查询到的帖子列表
-	//   - int64: 总共有多少条帖子（用于计算总页数）
-	//   - error: 如果出错会返回错误信息，否则为 nil
+	// 返回值说明：[]models.Post查到的帖子切片，int64查到的帖子个数
 	List(page, pageSize int, categoryID uint) ([]models.Post, int64, error)
 
 	// FindByID 根据帖子 ID 查询单个帖子的完整详情
@@ -28,43 +20,30 @@ type PostRepository interface {
 	//   - *models.Post: 指向帖子结构体的指针（如果找不到会返回 nil）
 	//   - error: 如果出错会返回错误信息
 	FindByID(id uint) (*models.Post, error)
+
+	// Create 创建新帖子
+	// 参数说明：
+	//   - post: 要创建的帖子对象（已验证的数据）
+	// 返回值说明：
+	//   - *models.Post: 创建后的帖子对象（包含自动生成的 ID、时间戳）
+	//   - error: 如果出错会返回错误信息
+	Create(post *models.Post) (*models.Post, error)
 }
 
-// postRepository 帖子数据访问的具体实现
-// 注意：结构体名字首字母小写 (postRepository)，这表示私有结构体，只能在本包内使用
-// 目前这个结构体没有字段，因为所有数据库操作都通过全局的 databases.DB 连接进行
 type postRepository struct{}
 
-// NewPostRepository 工厂函数，用来创建 PostRepository 实例
-// 设计模式：工厂模式 - 统一创建对象的方式
-// 返回值：返回 PostRepository 接口类型（不是具体的 postRepository 实现），这样调用者只需关心接口，不需关心具体实现
 func NewPostRepository() PostRepository {
 	return &postRepository{}
 }
 
-// List 分页查询帖子列表 - 这是 PostRepository 接口的具体实现
-// 作用：从数据库查询帖子，支持分页和按分类筛选
-// 工作流程：
-//  1. 构建查询条件（只查询已发布的帖子）
-//  2. 如果指定了分类，添加分类筛选条件
-//  3. 统计符合条件的总帖子数
-//  4. 执行分页查询（跳过前几条，取指定数量）
-//  5. 返回帖子列表和总数
 func (r *postRepository) List(page, pageSize int, categoryID uint) ([]models.Post, int64, error) {
 	// 声明两个变量来存储查询结果
-	var posts []models.Post // 用来存储查询到的帖子列表
-	var total int64         // 用来存储符合条件的总帖子数（int64 是为了处理大数据量）
-
-	// ========== 第一步：构建基础查询 ==========
-	// 解释：
-	//   - databases.DB: 全局数据库连接（在 databases/database.go 中初始化）
-	//   - Model(&models.Post{}): 指定要查询的表（Post 对应数据库的 posts 表）
+	var posts []models.Post
+	var total int64
 	//   - Where("status = ?", "published"): 添加条件 - 只查询状态为 "published"（已发布）的帖子
 	//   - 这里使用了参数化查询 (?) 来防止 SQL 注入攻击，第二个参数 "published" 会自动填入 ?
 	query := databases.DB.Model(&models.Post{}).Where("status = ?", "published")
 
-	// ========== 第二步：按分类筛选（可选） ==========
-	// 解释：
 	//   - 如果 categoryID > 0，说明用户要按某个分类筛选（比如只看 "技术分享" 分类）
 	//   - 如果 categoryID == 0，说明不按分类筛选（查询所有分类的帖子）
 	// 按分类筛选（categoryID=0 时不过滤）
@@ -74,8 +53,6 @@ func (r *postRepository) List(page, pageSize int, categoryID uint) ([]models.Pos
 		query = query.Where("category_id = ?", categoryID)
 	}
 
-	// ========== 第三步：统计总数 ==========
-	// 解释：
 	//   - Count(&total): 统计符合条件的记录数
 	//   - .Error: 获取执行过程中的错误信息（如果有的话）
 	//   - 如果查询出错，立即返回错误，不继续执行后续代码
@@ -184,4 +161,30 @@ func (r *postRepository) FindByID(id uint) (*models.Post, error) {
 	//   - 如果是大对象，返回指针更高效（避免复制整个对象）
 	//   - 如果可能不存在，通常返回指针（可以判断是否为 nil）
 	return &post, nil
+}
+
+// Create 创建新帖子 - 这是 PostRepository 接口的实现
+// 作用：将帖子数据保存到数据库
+// 参数：post - 已验证和初始化的帖子对象
+// 返回：保存后的帖子对象（包含自动生成的 ID、时间戳）和错误信息
+func (r *postRepository) Create(post *models.Post) (*models.Post, error) {
+	// ========== 执行插入操作 ==========
+	// databases.DB.Create(post) 会：
+	//   1. 执行 INSERT 语句将数据插入数据库
+	//   2. 自动生成 ID（自增主键）
+	//   3. 自动生成 CreatedAt、UpdatedAt 时间戳（gorm.Model 自动处理）
+	//   4. 将生成的 ID 写回 post 对象，所以调用者可以通过 post.ID 获取新生成的 ID
+	// 错误场景：
+	//   - 唯一索引冲突（比如 Title 重复）
+	//   - 外键约束失败（比如 AuthorID 不存在）
+	//   - 数据库连接问题
+	err := databases.DB.Create(post).Error
+
+	// 如果插入失败，直接返回错误
+	if err != nil {
+		return nil, err
+	}
+
+	// 插入成功，返回包含 ID 的帖子对象
+	return post, nil
 }

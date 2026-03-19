@@ -1,69 +1,82 @@
 package services
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"gin_demo/databases"
+	"gin_demo/models"
 	"gin_demo/repositories"
 	"strings"
-	"time"
 )
 
+// 为什么在 services 包中定义？
+//   - services 包依赖这个接口
+//   - cache 包实现这个接口
+//   - 这样避免循环导入（services 不需要导入 cache）
+
+type PostDetailCacher interface {
+	// GetPostDetail 从缓存获取帖子详情
+	GetPostDetail(postID uint) (*PostDetail, error)
+}
+
+type PostService interface {
+	// GetPostList 获取帖子分页列表
+	// 参数：
+	//   - page: 页码（从 1 开始）
+	//   - pageSize: 每页显示多少条
+	//   - categoryID: 分类 ID（0 表示不按分类筛选）
+	// 返回：
+	//   - *PostListResult: 分页列表结果
+	//   - error: 如果出错会返回错误信息
+	GetPostList(page, pageSize int, categoryID uint) (*PostListResult, error)
+
+	// GetPostDetail 获取帖子详情
+	// 参数：
+	//   - postID: 帖子 ID
+	// 返回：
+	//   - *PostDetail: 帖子详情数据
+	//   - error: 如果出错会返回错误信息
+	GetPostDetail(postID uint) (*PostDetail, error)
+
+	// CreatePost 创建新帖子
+	// 参数：
+	//   - authorID: 创建者的用户 ID
+	//   - req: 包含帖子标题、内容、分类、标签等信息的请求对象
+	// 返回：
+	//   - *PostDetail: 创建后的帖子详情
+	//   - error: 如果出错会返回错误信息
+	CreatePost(authorID uint, req *CreatePostRequest) (*PostDetail, error)
+}
+
 // PostListResult 帖子列表结果（含分页信息）
-// 这是调用 GetPostList() 方法时的返回数据结构
-// 前端收到的 JSON 数据结构就对应这个 struct
 type PostListResult struct {
 	// List 帖子摘要列表
-	// 示例：[{id: 1, title: "...", ...}, {id: 2, title: "...", ...}]
 	List []PostSummary `json:"list"`
 
 	// Total 符合条件的总帖子数（用来计算总页数）
-	// 比如：total = 100，pageSize = 20，那么总共有 5 页
 	Total int64 `json:"total"`
 
 	// Page 当前页码（用来告诉前端用户现在看的是第几页）
-	// 比如：page = 2
+
 	Page int `json:"page"`
 
 	// PageSize 每页显示的条数（用来告诉前端这次返回了多少条）
-	// 比如：page_size = 20
+
 	PageSize int `json:"page_size"`
 }
-
-// PostSummary 帖子列表摘要（不返回完整正文，节省流量）
-// 这个结构体用来表示帖子列表中的每一个帖子
-// 为什么叫 "摘要"？因为不包含完整的 Content（正文），只包含摘要前 200 字
-//
-// 对比：
-//
-//	├─ 列表页：显示帖子标题 + 摘要（让用户快速浏览）← 用 PostSummary
-//	└─ 详情页：显示帖子的全部内容（让用户详细阅读）← 需要其他 DTO
+//PostSummary用来保存列表页展示的帖子摘要信息，不返回整个帖子的信息
 type PostSummary struct {
 	// ID 帖子的唯一标识
 	// 前端点击帖子时会用这个 ID 来获取详情
-	// 例如：点击帖子后，向 /api/posts/123 发送请求
 	ID uint `json:"id"`
 
 	// Title 帖子标题
-	// 例如："如何学习 Go 语言"
 	Title string `json:"title"`
 
 	// Summary 帖子内容摘要（正文前 200 字符）
 	// 作用：在列表页显示预览，不用加载完整的长正文
-	// 例如："Go 是一门编译型语言，具有高效的并发能力..."
 	Summary string `json:"summary"`
 
 	// Author 作者信息（嵌套的对象）
-	// 这样前端收到的 JSON 是这样的：
-	// {
-	//   "id": 1,
-	//   "author": {
-	//     "id": 10,
-	//     "username": "tom",
-	//     "avatar": "http://..."
-	//   }
-	// }
+
 	Author AuthorInfo `json:"author"`
 
 	// Category 分类信息（嵌套的对象）
@@ -84,11 +97,7 @@ type PostSummary struct {
 }
 
 // AuthorInfo 作者摘要信息（不暴露密码等敏感字段）
-// 这是一个嵌套的结构体，用来在 PostSummary 中表示作者信息
-// 为什么不直接用 User 结构体？
-//
-//	User 结构体可能包含 Password、Email 等敏感信息
-//	这里只挑选需要展示的字段，更加安全
+
 type AuthorInfo struct {
 	// ID 作者的用户 ID
 	ID uint `json:"id"`
@@ -103,41 +112,20 @@ type AuthorInfo struct {
 }
 
 // CategoryInfo 分类摘要
-// 这是一个嵌套的结构体，用来在 PostSummary 中表示分类信息
+
 type CategoryInfo struct {
 	// ID 分类 ID
 	ID uint `json:"id"`
 
 	// Name 分类名称
-	// 例如："技术分享"、"闲聊吐槽"
+
 	Name string `json:"name"`
 
 	// Icon 分类图标（emoji 或图标名）
-	// 例如："💻"、"📚"
+	
 	Icon string `json:"icon"`
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 第二部分：定义业务接口
-// ═══════════════════════════════════════════════════════════════
-// 接口的作用：
-//   定义服务层应该提供的功能
-//   类似于一份合同：实现这个接口的结构体必须实现所有定义的方法
-
-// ═══════════════════════════════════════════════════════════════
-// 帖子详情 DTO - 返回给前端的数据结构
-// ═══════════════════════════════════════════════════════════════
-
-// PostDetail 帖子详情（包含完整内容）
-// 对比 PostSummary：
-//
-//	├─ PostSummary：用于列表页（摘要 + 分页）
-//	└─ PostDetail：用于详情页（完整内容 + 更多信息）
-//
-// 关键区别：
-//   - Content：完整的帖子内容（不截断）
-//   - ViewCount：浏览次数（从 Redis 获取）
-//   - LikeCount：点赞数（可选，需要实现点赞功能）
 type PostDetail struct {
 	// 基础信息
 	ID        uint   `json:"id"`
@@ -156,104 +144,52 @@ type PostDetail struct {
 	// 标签信息 - 字符串数组（已解析）
 	// 示例：["golang", "并发", "最佳实践"]
 	Tags []string `json:"tags"`
-
-	// 统计信息（可选，需要扩展）
-	// ViewCount int   `json:"view_count"`      // 浏览次数
-	// LikeCount int   `json:"like_count"`      // 点赞数
-	// CommentCount int `json:"comment_count"`  // 评论数
 }
 
-// PostService 帖子业务接口
-// 这个接口定义了关于帖子的所有业务操作方法
-// 好处：
-//  1. 解耦：控制器不需要知道具体实现，只需调用接口方法
-//  2. 可测试：可以轻松创建 Mock 实现进行单元测试
-//  3. 灵活性：将来可以轻松替换为另一个实现
-type PostService interface {
-	// GetPostList 获取帖子分页列表
-	// 参数：
-	//   - page: 页码（从 1 开始）
-	//   - pageSize: 每页显示多少条
-	//   - categoryID: 分类 ID（0 表示不按分类筛选）
-	// 返回：
-	//   - *PostListResult: 分页列表结果
-	//   - error: 如果出错会返回错误信息
-	GetPostList(page, pageSize int, categoryID uint) (*PostListResult, error)
+//创建帖子模型
+type CreatePostRequest struct {
+	// Title 帖子标题
+	// binding:"required" - 表示必填项，如果不提供会自动验证失败
+	// binding:"max=200" - 表示最多 200 个字符
+	Title string `json:"title" binding:"required,max=200"`
 
-	// GetPostDetail 获取帖子详情
-	// 参数：
-	//   - postID: 帖子 ID
-	// 返回：
-	//   - *PostDetail: 帖子详情数据
-	//   - error: 如果出错会返回错误信息
-	GetPostDetail(postID uint) (*PostDetail, error)
+	// Content 帖子内容（支持 Markdown）
+	// binding:"required" - 表示必填项
+	// binding:"min=10" - 表示至少 10 个字符（防止垃圾内容）
+	Content string `json:"content" binding:"required,min=10"`
+
+	// CategoryID 帖子分类 ID
+	// 可选字段（binding 中没有 required）
+	// 如果用户不提供，默认为 0（不分类）
+	CategoryID uint `json:"category_id"`
+
+	// Tags 帖子标签（逗号分隔的字符串）
+	// 示例："golang,数据库,缓存"
+	// 可选字段
+	Tags string `json:"tags" binding:"max=200"`
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 第三部分：实现业务接口
-// ═══════════════════════════════════════════════════════════════
 
-// postService 帖子业务的具体实现
-// 注意：首字母小写（postService），表示私有结构体，只能在本包内使用
-// 对应的是上面的 PostService 接口
+
 type postService struct {
-	// repo 数据访问层的仓储对象
-	// 通过这个对象来调用数据库查询等操作
-	// 例如：s.repo.List(...) 会调用数据库查询
-	repo repositories.PostRepository
+	repo  repositories.PostRepository
+	cache PostDetailCacher  // ← 使用 PostDetailCacher 接口
 }
 
-// NewPostService 工厂函数 - 创建服务实例
-// 这是一个创建 postService 的标准方式
-// 为什么要用工厂函数而不是直接 new？
-//  1. 统一的创建方式
-//  2. 可以在创建时做一些初始化逻辑
-//  3. 隐藏内部实现细节（用户不需要知道是 postService）
-//
-// 使用方式：
-//
-//	repo := repositories.NewPostRepository()
-//	svc := NewPostService(repo)  ← 这样就创建了一个服务实例
-func NewPostService(repo repositories.PostRepository) PostService {
-	// 创建 postService 实例，保存仓储对象的引用
-	// 返回类型是 PostService 接口，而不是具体的 postService 实现
-	// 这样调用者只关心接口，不关心具体实现
-	return &postService{repo: repo}
+// 架构原理：
+//   - postService 依赖 repo 和 cache
+//   - cache 内部也持有 repo（但是同一个对象）
+//   - 这不是"两个 repo"，而是"同一个 repo 被两个地方引用"
+func NewPostService(repo repositories.PostRepository, cache PostDetailCacher) PostService {
+	return &postService{
+		repo:  repo,
+		cache: cache,
+	}
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 第四部分：核心业务方法 - GetPostList
-// ═══════════════════════════════════════════════════════════════
 
-// GetPostList 获取帖子分页列表 - PostService 接口的实现
-// 这是整个服务层最重要的方法，包含了所有的业务逻辑处理
-//
-// 工作流程：
-//  1. 验证和修正参数（确保合理的分页参数）
-//  2. 调用仓储层查询数据库
-//  3. 将数据库模型转换为 DTO
-//  4. 对数据进行业务逻辑处理（比如生成摘要、格式化时间）
-//  5. 返回格式化后的结果给控制器
-//
-// 参数说明：
-//   - page: 用户请求的页码
-//   - pageSize: 用户请求的每页条数
-//   - categoryID: 用户要筛选的分类 ID
-//
-// 返回值说明：
-//   - *PostListResult: 包含分页列表的结果对象
-//   - error: 如果发生错误（比如数据库连接失败）会返回错误
+
 func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostListResult, error) {
-
-	// ═══════════════════════════════════════════════════════════════
-	// 步骤 1：参数验证和修正（客户端验证）
-	// ═══════════════════════════════════════════════════════════════
-	// 为什么需要验证？
-	//   前端的数据不一定是有效的。用户可能：
-	//   1. 输入负数的页码
-	//   2. 要求每页显示 10000 条（太多了，会导致服务器内存溢出）
-	//   3. 通过 API 直接调用，传入非法参数
-	//   所以后端必须再次验证，这叫做 "不信任来自客户端的数据"
 
 	// 检查页码是否有效
 	if page < 1 {
@@ -262,22 +198,14 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 	}
 
 	// 检查每页条数是否有效
-	if pageSize < 1 || pageSize > 50 {
+	if pageSize < 1 || pageSize > 20 {
 		// 如果每页条数小于 1 或大于 50，纠正为默认值 20
 		// 为什么最多 50？
 		//   - 限制每次查询的数据量，防止大量数据查询导致服务器压力
 		//   - 这是一个常见的安全做法
-		pageSize = 20 // 默认每页 20 条，最多 50 条
+		pageSize = 5 // 默认每页 5 条，最多 50 条
 	}
 
-	// ═══════════════════════════════════════════════════════════════
-	// 步骤 2：调用仓储层查询数据库
-	// ═══════════════════════════════════════════════════════════════
-	// s.repo.List(...) 会执行以下 SQL：
-	//   SELECT * FROM posts
-	//   WHERE status = 'published' AND category_id = ?
-	//   ORDER BY created_at DESC
-	//   LIMIT ? OFFSET ?
 
 	posts, total, err := s.repo.List(page, pageSize, categoryID)
 
@@ -329,14 +257,7 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 			summary = string(runes[:200]) + "..."
 		}
 
-		// ───────────────────────────────────────────────────────────
-		// 步骤 4.2：处理标签（从字符串转换为切片）
-		// ───────────────────────────────────────────────────────────
-		// 数据库中存储的标签是这样的：
-		//   "golang,database,缓存"（逗号分隔的字符串）
-		// 但返回给前端的应该是：
-		//   ["golang", "database", "缓存"]（JSON 数组）
-		// 这样前端处理更方便
+		
 
 		// 声明一个空的标签切片
 		var tags []string
@@ -363,28 +284,7 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 				tags[i] = strings.TrimSpace(tag)
 			}
 		}
-
-		// ───────────────────────────────────────────────────────────
-		// 步骤 4.3：构建 PostSummary 对象
-		// ───────────────────────────────────────────────────────────
-		// 现在我们有了所有需要的数据，构建一个 PostSummary 对象
-		// 这个对象只包含前端需要的字段（不暴露内部实现细节）
-
-		// p.CreatedAt.Format("2006-01-02 15:04:05")
-		// 时间格式化说明：
-		//   - p.CreatedAt 是 time.Time 类型（Go 的时间类型）
-		//   - .Format() 方法可以将其格式化为字符串
-		//   - "2006-01-02 15:04:05" 是格式字符串
-		//     * 2006 代表年
-		//     * 01 代表月
-		//     * 02 代表日
-		//     * 15 代表小时（24 小时制）
-		//     * 04 代表分钟
-		//     * 05 代表秒
-		//   - 结果例如："2026-03-15 10:30:45"
-		// 为什么要格式化？
-		//   - 数据库存的是 time.Time 对象，不方便转 JSON
-		//   - 转成字符串后，JSON 序列化更简单
+		
 		list = append(list, PostSummary{
 			ID:        p.ID,
 			Title:     p.Title,
@@ -417,14 +317,7 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 	}, nil // nil 表示没有错误
 }
 
-// GetPostDetail 获取帖子详情 - PostService 接口的实现
-// ═════════════════════════════════════════════════════════════════════════════
-// 这个方法处理帖子详情页的业务逻辑
-//
-// 工作流程：
-//  1. 从数据库查询帖子及其关联数据
-//  2. 检查帖子是否存在及是否已发布
-//  3. 将数据库模型转换为详情 DTO
+
 //  4. 增加浏览次数（可选，需要 Redis）
 //  5. 返回详情给前端
 //
@@ -436,98 +329,124 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 //   - error: 如果出错返回错误（比如帖子不存在）
 //
 // 与 GetPostList 的区别：
-//
-//	┌─────────────────────┬──────────────────┬──────────────────┐
-//	│ 功能                │ GetPostList       │ GetPostDetail    │
-//	├─────────────────────┼──────────────────┼──────────────────┤
-//	│ 返回的内容          │ 摘要（200 字）   │ 完整内容        │
-//	│ 返回的数量          │ 多条（分页）     │ 单条            │
-//	│ 性能要求            │ 快（列表页）     │ 普通（详情页）  │
-//	│ 浏览次数统计        │ 不计             │ 需要计             │
-//	│ 缓存策略            │ 短期（1小时）   │ 中期（6小时）   │
-//	└─────────────────────┴──────────────────┴──────────────────┘
+
 func (s *postService) GetPostDetail(postID uint) (*PostDetail, error) {
+	
+	return s.cache.GetPostDetail(postID)
+}
 
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 步骤 1️⃣：尝试从 Redis 缓存获取数据
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 旁路缓存（Cache-Aside Pattern）的核心：先查缓存，再查数据库
-	cacheKey := fmt.Sprintf("post:%d:detail", postID)
-	cachedData, err := databases.RDB.Get(context.Background(), cacheKey).Result()
+// CreatePost 创建新帖子 - PostService 接口的实现
+// ═════════════════════════════════════════════════════════════════════════════════════
+// 这个方法处理帖子创建的所有业务逻辑
+//
+// 工作流程：
+//  1. 验证请求数据（标题和内容的长度、格式等）
+//  2. 构建 Post 数据库模型
+//  3. 设置默认状态为 "published"（直接发布）
+//  4. 调用仓储层保存到数据库
+//  5. 获取作者和分类的完整信息
+//  6. 转换为 PostDetail 返回给前端
+//
+// 参数：
+//   - authorID: 创建者的用户 ID（从 JWT Token 中提取）
+//   - req: 前端提交的创建帖子请求（已通过 Gin 的自动验证）
+//
+// 返回：
+//   - *PostDetail: 创建后的帖子详情
+//   - error: 如果出错返回错误（比如数据库插入失败）
+func (s *postService) CreatePost(authorID uint, req *CreatePostRequest) (*PostDetail, error) {
 
-	// 检查是否成功获取缓存
-	if err == nil && cachedData != "" {
-		// 🎉 缓存命中！
-		var detail PostDetail
-		err := json.Unmarshal([]byte(cachedData), &detail)
-		if err == nil {
-			// 缓存命中，直接返回（~10ms，快 20 倍！）
-			return &detail, nil
-		}
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 步骤 1️⃣：参数验证（额外的业务规则检查）
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 注意：
+	//   - 基础的格式校验（比如 required、max、min）已经由 Gin 的 binding 完成
+	//   - 这里做额外的业务逻辑检查
+
+	// 检查标题是否为空或只包含空格
+	if strings.TrimSpace(req.Title) == "" {
+		return nil, fmt.Errorf("标题不能为空")
 	}
 
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 步骤 2️⃣：缓存未命中，查询数据库
-	// ═════════════════════════════════════════════════════════════════════════════
-	post, err := s.repo.FindByID(postID)
+	// 检查内容是否为空或只包含空格
+	if strings.TrimSpace(req.Content) == "" {
+		return nil, fmt.Errorf("内容不能为空")
+	}
 
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 步骤 2️⃣：构建 Post 数据库模型
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 创建一个新的 Post 结构体，填入前端提交的数据和默认值
+	post := &models.Post{
+		// 从请求中直接获取的字段
+		Title:      strings.TrimSpace(req.Title), // 去掉首尾空格
+		Content:    req.Content,
+		AuthorID:   authorID,
+		CategoryID: req.CategoryID,
+		Tags:       strings.TrimSpace(req.Tags),
+		Status:     "published", // 默认设置为已发布（可改为 "draft" 草稿）
+	}
+
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 步骤 3️⃣：调用仓储层保存到数据库
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// s.repo.Create(post) 会：
+	//   1. 执行 INSERT SQL 将数据插入数据库
+	//   2. GORM 自动生成 ID、CreatedAt、UpdatedAt
+	//   3. 返回修改后的 post 对象（包含新生成的 ID）
+	// 可能的错误：
+	//   - 数据库连接失败
+	//   - 唯一索引冲突（如果 Title 设置了唯一索引）
+	//   - 外键约束失败（如 AuthorID 或 CategoryID 不存在）
+	createdPost, err := s.repo.Create(post)
 	if err != nil {
-		return nil, err
+		// 返回错误，由控制器决定如何响应
+		return nil, fmt.Errorf("创建帖子失败: %w", err)
 	}
 
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 步骤 3️⃣：业务规则检查
-	// ═════════════════════════════════════════════════════════════════════════════
-	if post.Status != "published" {
-		return nil, fmt.Errorf("帖子不存在或已被删除")
-	}
-
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 步骤 4️⃣：标签处理
-	// ═════════════════════════════════════════════════════════════════════════════
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 步骤 4️⃣：处理标签（从字符串转换为切片）
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 数据库中存储的标签是逗号分隔的字符串，需要转换为数组返回给前端
 	var tags []string
-	if post.Tags != "" {
-		tags = strings.Split(post.Tags, ",")
+	if createdPost.Tags != "" {
+		tags = strings.Split(createdPost.Tags, ",")
 		for i, tag := range tags {
 			tags[i] = strings.TrimSpace(tag)
 		}
 	}
 
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 步骤 5️⃣：构建 PostDetail 对象
-	// ═════════════════════════════════════════════════════════════════════════════
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 步骤 5️⃣：构建 PostDetail 响应对象
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 将创建后的 Post 模型转换为 PostDetail DTO
+	// 注意：我们还需要获取作者和分类的完整信息
+	// 但通常后续的 Preload 会在 FindByID 中进行
+	// 这里为了演示，我们直接使用 createdPost 中的关联信息
 	detail := &PostDetail{
-		ID:        post.ID,
-		Title:     post.Title,
-		Content:   post.Content,
-		Status:    post.Status,
-		CreatedAt: post.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt: post.UpdatedAt.Format("2006-01-02 15:04:05"),
+		ID:        createdPost.ID,
+		Title:     createdPost.Title,
+		Content:   createdPost.Content,
+		Status:    createdPost.Status,
+		CreatedAt: createdPost.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: createdPost.UpdatedAt.Format("2006-01-02 15:04:05"),
+		// 这里作者和分类可能不完整（取决于 Create 后是否自动 Preload）
+		// 实际应用中可能需要额外查询
 		Author: AuthorInfo{
-			ID:       post.Author.ID,
-			Username: post.Author.Username,
-			Avatar:   post.Author.Avatar,
+			ID:       createdPost.Author.ID,
+			Username: createdPost.Author.Username,
+			Avatar:   createdPost.Author.Avatar,
 		},
 		Category: CategoryInfo{
-			ID:   post.Category.ID,
-			Name: post.Category.Name,
-			Icon: post.Category.Icon,
+			ID:   createdPost.Category.ID,
+			Name: createdPost.Category.Name,
+			Icon: createdPost.Category.Icon,
 		},
 		Tags: tags,
 	}
 
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 步骤 6️⃣：将结果存入 Redis 缓存（旁路缓存的关键）
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 缓存 6 小时，这样下次访问会直接返回缓存，不需要查询数据库
-	data, err := json.Marshal(detail)
-	if err == nil {
-		expiration := 6 * time.Hour
-		_ = databases.RDB.Set(context.Background(), cacheKey, string(data), expiration).Err()
-	}
-
-	// ═════════════════════════════════════════════════════════════════════════════
-	// 步骤 7️⃣：返回结果
-	// ═════════════════════════════════════════════════════════════════════════════
+	// ═════════════════════════════════════════════════════════════════════════════════
+	// 步骤 6️⃣：返回结果
+	// ═════════════════════════════════════════════════════════════════════════════════
 	return detail, nil
 }

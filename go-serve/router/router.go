@@ -1,6 +1,7 @@
 package router
 
 import (
+	"gin_demo/cache"
 	"gin_demo/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -91,8 +92,14 @@ func SetupRouter() *gin.Engine {
 	userService := services.NewUserService(userRepo)
 	userController := controllers.NewUserController(userService)
 
+	// ═════════════════════════════════════════════════════════════════════════════
+	// Post 服务依赖注入链：Repository → Cache → Service
+	// ═════════════════════════════════════════════════════════════════════════════
+	// 关键：只创建一个 Repository 对象，让 Cache 和 Service 共享
+	// 这不是"两个持久层"，而是"同一个持久层被两个地方引用"
 	postRepo := repositories.NewPostRepository()
-	postService := services.NewPostService(postRepo)
+	cache := cache.NewPostCache(postRepo)
+	postService := services.NewPostService(postRepo, cache)
 	postController := controllers.NewPostController(postService)
 
 	// JSON API 路由（前后端分离使用）
@@ -108,12 +115,18 @@ func SetupRouter() *gin.Engine {
 			apiAuth.GET("/profile", userController.ShowProfile)     //个人信息展示
 			apiAuth.PUT("/password", userController.UpdatePassword) // 更新密码
 		}
-		
+
 		// 帖子路由
 		apiPost := api.Group("/posts")
 		{
-			apiPost.GET("/home", postController.GetPosts)       // 获取帖子列表（分页、筛选）
-			apiPost.GET("/:id", postController.GetPostDetail)   // 获取帖子详情（单个帖子，使用旁路缓存）
+			apiPost.GET("/home", postController.GetPosts)     // 获取帖子列表（分页、筛选）
+			apiPost.GET("/:id", postController.GetPostDetail) // 获取帖子详情（单个帖子，使用旁路缓存）
+
+			// 需要登录的受保护帖子操作
+			apiPostAuth := apiPost.Group("").Use(middleware.AuthMiddleware())
+			{
+				apiPostAuth.POST("/create", postController.CreatePost) // 创建帖子（需要登录，JWT 验证）
+			}
 		}
 	}
 
