@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -39,7 +41,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 去掉前面的 "Bearer " 前缀（7个字符），只保留纯 Token 字符串
-		tokenString := authHeader[7:]
+		// 并且去掉可能的前后空格
+		tokenString := strings.TrimSpace(authHeader[7:])
 
 		// ── 第二步：用密钥解析并验证 Token ────────────────────────────────
 		//
@@ -59,7 +62,12 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		// 解析失败（Token 格式错误、签名不匹配、已过期等），拒绝请求
-		if err != nil || !parsed.Valid {
+		if err != nil {
+			c.AbortWithStatusJSON(401, gin.H{"error": "token parse failed: " + err.Error()})
+			return
+		}
+
+		if !parsed.Valid {
 			c.AbortWithStatusJSON(401, gin.H{"error": "invalid token"})
 			return
 		}
@@ -85,4 +93,19 @@ func AuthMiddleware() gin.HandlerFunc {
 		// ── 第四步：验证通过，放行请求 ────────────────────────────────────
 		c.Next()
 	}
+}
+
+// GetUserID 从 Gin 上下文中获取当前用户 ID
+func GetUserID(c *gin.Context) (uint, error) {
+	val, exists := c.Get("userID")
+	if !exists {
+		return 0, gin.Error{Err: nil, Type: gin.ErrorTypeBind, Meta: "userID not found"}
+	}
+
+	userID, ok := val.(int64)
+	if !ok {
+		return 0, gin.Error{Err: nil, Type: gin.ErrorTypeBind, Meta: "invalid userID type"}
+	}
+
+	return uint(userID), nil
 }

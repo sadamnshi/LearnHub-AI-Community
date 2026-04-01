@@ -10,8 +10,14 @@
 </template>
 
 <script>
+import { clearExpiredToken } from '@/utils/token'
+
 export default {
-  name: 'App'
+  name: 'App',
+  created() {
+    // 应用启动时检查并清除过期的 Token
+    clearExpiredToken()
+  }
 }
 </script>
 

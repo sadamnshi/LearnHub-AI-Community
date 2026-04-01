@@ -102,6 +102,11 @@ func SetupRouter() *gin.Engine {
 	postService := services.NewPostService(postRepo, cache)
 	postController := controllers.NewPostController(postService)
 
+	// 🤖 AI 聊天服务依赖注入
+	chatRepo := repositories.NewChatRepository()
+	aiService := services.NewAIService(chatRepo)
+	aiController := controllers.NewAIController(aiService)
+
 	// JSON API 路由（前后端分离使用）
 	api := r.Group("/api")
 	{
@@ -127,6 +132,14 @@ func SetupRouter() *gin.Engine {
 			{
 				apiPostAuth.POST("/create", postController.CreatePost) // 创建帖子（需要登录，JWT 验证）
 			}
+		}
+
+		// 🤖 AI 聊天路由（需要登录）
+		apiChat := api.Group("/chat").Use(middleware.AuthMiddleware())
+		{
+			apiChat.POST("/send", aiController.SendMessage)       // 发送消息并获取 AI 回复
+			apiChat.GET("/history", aiController.GetHistory)      // 获取聊天历史
+			apiChat.DELETE("/history", aiController.ClearHistory) // 清空聊天历史
 		}
 	}
 

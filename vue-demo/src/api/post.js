@@ -25,9 +25,18 @@ async function request(url, options = {}) {
   const response = await fetch(url, finalOptions)
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`)
+    // 后端返回的是 gin.H 格式，包含 error/msg 字段
+    const errorMsg = errorData.error || errorData.msg || errorData.message || `HTTP ${response.status}`
+    throw new Error(errorMsg)
   }
-  return await response.json()
+  
+  // 检查响应是否是 JSON 格式
+  const data = await response.json().catch(() => null)
+  if (!data) {
+    throw new Error('服务器响应无效')
+  }
+  
+  return data
 }
 
 /**
@@ -113,5 +122,113 @@ export async function fetchPostDetail(postId) {
     }
     // 其他类型的错误，包装成 Error 对象
     throw new Error(error.message || '获取帖子详情时发生错误')
+  }
+}
+
+/**
+ * 创建新帖子（需要登录，受保护接口）
+ * 
+ * @param {Object} postData - 帖子数据
+ * @param {string} postData.title - 帖子标题（必填，最多200字符）
+ * @param {string} postData.content - 帖子内容（必填，支持Markdown，至少10字符）
+ * @param {number} postData.category_id - 分类ID（可选，默认0）
+ * @param {string} postData.tags - 逗号分隔的标签（可选，最多200字符）
+ * @returns {Promise<PostDetail>} 创建后的帖子详情
+ * @throws {Error} 如果创建失败或未登录
+ * 
+ * 调用示例：
+ * const newPost = await createPost({
+ *   title: '我的第一篇帖子',
+ *   content: '这是帖子的完整内容...',
+ *   category_id: 1,
+ *   tags: 'javascript,vue,前端'
+ * })
+ * 
+ * 成功响应示例：
+ * {
+ *   "id": 123,
+ *   "title": "我的第一篇帖子",
+ *   "content": "这是帖子的完整内容...",
+ *   "author": {
+ *     "id": 1,
+ *     "username": "alice",
+ *     "avatar": "https://..."
+ *   },
+ *   "category": {
+ *     "id": 1,
+ *     "name": "技术分享",
+ *     "icon": "💻"
+ *   },
+ *   "tags": ["javascript", "vue", "前端"],
+ *   "status": "published",
+ *   "created_at": "2026-03-19 15:30:45",
+ *   "updated_at": "2026-03-19 15:30:45"
+ * }
+ * 
+ * 错误响应示例：
+ * {
+ *   "code": 401,
+ *   "msg": "未授权，请先登录"
+ * }
+ */
+export async function createPost(postData) {
+  // 参数验证
+  if (!postData.title || !postData.title.trim()) {
+    throw new Error('帖子标题不能为空')
+  }
+
+  if (!postData.content || !postData.content.trim()) {
+    throw new Error('帖子内容不能为空')
+  }
+
+  if (postData.content.trim().length < 10) {
+    throw new Error('帖子内容至少需要10个字符')
+  }
+
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    throw new Error('未登录，请先登录后再发布帖子')
+  }
+
+  // 调试信息：检查 Token 格式
+  if (!token.startsWith('eyJ')) {
+    console.warn('⚠️ Token 格式可能不正确，预期以 "eyJ" 开头')
+  }
+  if (token.length < 50) {
+    console.warn('⚠️ Token 长度过短，可能不是有效的 JWT')
+  }
+
+  try {
+    // 发送 POST 请求到创建帖子接口
+    const response = await request(`${API_BASE}/posts/create`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: postData.title.trim(),
+        content: postData.content.trim(),
+        category_id: postData.category_id || 0,
+        tags: (postData.tags || '').trim()
+      })
+    })
+
+    // 检查业务状态码
+    if (response.code !== 0) {
+      throw new Error(response.msg || '创建帖子失败')
+    }
+
+    // 返回创建后的帖子详情
+    return response.data
+
+  } catch (error) {
+    // 更详细的错误日志
+    console.error('❌ 创建帖子错误详情:', {
+      message: error.message,
+      stack: error.stack,
+      token: token ? `${token.substring(0, 50)}...` : 'null'
+    })
+    
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error(error.message || '创建帖子时发生错误')
   }
 }

@@ -19,30 +19,12 @@ type PostDetailCacher interface {
 
 type PostService interface {
 	// GetPostList 获取帖子分页列表
-	// 参数：
-	//   - page: 页码（从 1 开始）
-	//   - pageSize: 每页显示多少条
-	//   - categoryID: 分类 ID（0 表示不按分类筛选）
-	// 返回：
-	//   - *PostListResult: 分页列表结果
-	//   - error: 如果出错会返回错误信息
 	GetPostList(page, pageSize int, categoryID uint) (*PostListResult, error)
 
 	// GetPostDetail 获取帖子详情
-	// 参数：
-	//   - postID: 帖子 ID
-	// 返回：
-	//   - *PostDetail: 帖子详情数据
-	//   - error: 如果出错会返回错误信息
 	GetPostDetail(postID uint) (*PostDetail, error)
 
 	// CreatePost 创建新帖子
-	// 参数：
-	//   - authorID: 创建者的用户 ID
-	//   - req: 包含帖子标题、内容、分类、标签等信息的请求对象
-	// 返回：
-	//   - *PostDetail: 创建后的帖子详情
-	//   - error: 如果出错会返回错误信息
 	CreatePost(authorID uint, req *CreatePostRequest) (*PostDetail, error)
 }
 
@@ -62,7 +44,8 @@ type PostListResult struct {
 
 	PageSize int `json:"page_size"`
 }
-//PostSummary用来保存列表页展示的帖子摘要信息，不返回整个帖子的信息
+
+// PostSummary用来保存列表页展示的帖子摘要信息，不返回整个帖子的信息
 type PostSummary struct {
 	// ID 帖子的唯一标识
 	// 前端点击帖子时会用这个 ID 来获取详情
@@ -122,7 +105,7 @@ type CategoryInfo struct {
 	Name string `json:"name"`
 
 	// Icon 分类图标（emoji 或图标名）
-	
+
 	Icon string `json:"icon"`
 }
 
@@ -146,7 +129,7 @@ type PostDetail struct {
 	Tags []string `json:"tags"`
 }
 
-//创建帖子模型
+// 创建帖子模型
 type CreatePostRequest struct {
 	// Title 帖子标题
 	// binding:"required" - 表示必填项，如果不提供会自动验证失败
@@ -169,11 +152,9 @@ type CreatePostRequest struct {
 	Tags string `json:"tags" binding:"max=200"`
 }
 
-
-
 type postService struct {
 	repo  repositories.PostRepository
-	cache PostDetailCacher  // ← 使用 PostDetailCacher 接口
+	cache PostDetailCacher // ← 使用 PostDetailCacher 接口
 }
 
 // 架构原理：
@@ -187,8 +168,6 @@ func NewPostService(repo repositories.PostRepository, cache PostDetailCacher) Po
 	}
 }
 
-
-
 func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostListResult, error) {
 
 	// 检查页码是否有效
@@ -199,13 +178,8 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 
 	// 检查每页条数是否有效
 	if pageSize < 1 || pageSize > 20 {
-		// 如果每页条数小于 1 或大于 50，纠正为默认值 20
-		// 为什么最多 50？
-		//   - 限制每次查询的数据量，防止大量数据查询导致服务器压力
-		//   - 这是一个常见的安全做法
 		pageSize = 5 // 默认每页 5 条，最多 50 条
 	}
-
 
 	posts, total, err := s.repo.List(page, pageSize, categoryID)
 
@@ -215,9 +189,7 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 		return nil, err
 	}
 
-	// ═══════════════════════════════════════════════════════════════
-	// 步骤 3 & 4：将模型转换为 DTO，并进行业务逻辑处理
-	// ═══════════════════════════════════════════════════════════════
+	// 将模型转换为 DTO，并进行业务逻辑处理
 	// make([]PostSummary, 0, len(posts))
 	// 这行创建一个空切片，用来存储转换后的数据
 	// 参数说明：
@@ -228,14 +200,6 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 
 	// 遍历从数据库查询出来的每一个帖子
 	for _, p := range posts {
-
-		// ───────────────────────────────────────────────────────────
-		// 步骤 4.1：生成帖子摘要（正文前 200 字）
-		// ───────────────────────────────────────────────────────────
-		// 为什么需要摘要？
-		//   - 列表页不需要显示完整的帖子内容
-		//   - 只显示预览，用户点击后才加载完整内容
-		//   - 这样可以减少网络流量，提升列表页加载速度
 
 		// 将正文赋值给 summary 变量（暂时都是完整正文）
 		summary := p.Content
@@ -256,8 +220,6 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 			// 如果超过，截取前 200 字，后面加上 "..."
 			summary = string(runes[:200]) + "..."
 		}
-
-		
 
 		// 声明一个空的标签切片
 		var tags []string
@@ -284,7 +246,7 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 				tags[i] = strings.TrimSpace(tag)
 			}
 		}
-		
+
 		list = append(list, PostSummary{
 			ID:        p.ID,
 			Title:     p.Title,
@@ -317,7 +279,6 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 	}, nil // nil 表示没有错误
 }
 
-
 //  4. 增加浏览次数（可选，需要 Redis）
 //  5. 返回详情给前端
 //
@@ -331,22 +292,10 @@ func (s *postService) GetPostList(page, pageSize int, categoryID uint) (*PostLis
 // 与 GetPostList 的区别：
 
 func (s *postService) GetPostDetail(postID uint) (*PostDetail, error) {
-	
+
 	return s.cache.GetPostDetail(postID)
 }
 
-// CreatePost 创建新帖子 - PostService 接口的实现
-// ═════════════════════════════════════════════════════════════════════════════════════
-// 这个方法处理帖子创建的所有业务逻辑
-//
-// 工作流程：
-//  1. 验证请求数据（标题和内容的长度、格式等）
-//  2. 构建 Post 数据库模型
-//  3. 设置默认状态为 "published"（直接发布）
-//  4. 调用仓储层保存到数据库
-//  5. 获取作者和分类的完整信息
-//  6. 转换为 PostDetail 返回给前端
-//
 // 参数：
 //   - authorID: 创建者的用户 ID（从 JWT Token 中提取）
 //   - req: 前端提交的创建帖子请求（已通过 Gin 的自动验证）

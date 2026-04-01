@@ -48,6 +48,7 @@ func AutoMigrate() {
 		&models.User{},
 		&models.Post{},
 		&models.Category{},
+		&models.ChatMessage{},
 	); err != nil {
 		log.Fatalf("auto migrate failed: %v", err)
 	}
