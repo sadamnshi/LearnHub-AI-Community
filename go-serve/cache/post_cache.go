@@ -93,7 +93,13 @@ func (c *postCacheImpl) GetPostDetail(postID uint) (*services.PostDetail, error)
 
 	//异步缓存，不阻塞主流程
 	go func() {
-		err := databases.RDB.Set(context.Background(), cacheKey, detail, Expiration).Err()
+		jsonData, err := json.Marshal(&detail)
+		if err != nil {
+			log.Printf("Failed to marshal post detail %d: %v", postID, err)
+			return
+		}
+
+		err = databases.RDB.Set(context.Background(), cacheKey, jsonData, Expiration).Err()
 		if err != nil {
 			// 只记录日志，不影响返回结果
 			log.Printf("Failed to cache post detail %d: %v", postID, err)

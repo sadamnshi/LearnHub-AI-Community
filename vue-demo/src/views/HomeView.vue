@@ -22,9 +22,14 @@
       <!-- 页面标题 -->
       <div class="page-header">
         <h1>最新帖子</h1>
-        <router-link v-if="isLoggedIn" to="/post/create" class="btn-primary">
-          ✏️ 发布帖子
-        </router-link>
+        <div class="header-actions" v-if="isLoggedIn">
+          <router-link to="/ai-chat" class="btn-secondary">
+            🤖 AI助手
+          </router-link>
+          <router-link to="/post/create" class="btn-primary">
+            ✏️ 发布帖子
+          </router-link>
+        </div>
       </div>
 
       <!-- 加载状态 -->
@@ -348,6 +353,28 @@ export default {
   font-size: 22px;
   color: #222;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-secondary {
+  background: #9c27b0;
+  color: #fff !important;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #7b1fa2;
 }
 
 /* ========== 状态 ========== */
