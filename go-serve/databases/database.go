@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"gin_demo/models"
 	"log"
-	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -26,21 +25,13 @@ func InitDatabase() {
 
 // 获取数据库连接串
 func getDSN() string {
-	host := getEnv("PG_HOST", "localhost")
-	port := getEnv("PG_PORT", "5432")
-	user := getEnv("PG_USER", "postgres")
-	password := getEnv("PG_PASSWORD", "123456")
-	dbname := getEnv("PG_DB", "postgres")
+	host := mustGetEnv("PG_HOST")
+	port := mustGetEnv("PG_PORT")
+	user := mustGetEnv("PG_USER")
+	password := mustGetEnv("PG_PASSWORD")
+	dbname := mustGetEnv("PG_DB")
 
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-}
-
-// 获取环境变量中的数据库连接信息
-func getEnv(key, defaultVal string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return defaultVal
 }
 
 func AutoMigrate() {

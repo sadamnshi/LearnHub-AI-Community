@@ -1,0 +1,40 @@
+# ===== 环境变量配置 =====
+config/.env
+config/.env.local
+config/.env.*.local
+!config/.env.example
+
+# ===== 敏感文件 =====
+*.key
+*.pem
+*.p12
+secrets/
+.secrets/
+credentials.json
+
+# ===== IDE 和操作系统 =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== 依赖和构建产物 =====
+vendor/
+dist/
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# ===== 日志文件 =====
+*.log
+logs/
+
+# ===== 临时文件 =====
+tmp/
+temp/
+*.tmp

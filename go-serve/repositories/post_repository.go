@@ -28,6 +28,12 @@ type PostRepository interface {
 	//   - *models.Post: 创建后的帖子对象（包含自动生成的 ID、时间戳）
 	//   - error: 如果出错会返回错误信息
 	Create(post *models.Post) (*models.Post, error)
+
+	// FindAllCategories 获取所有分类
+	// 返回值说明：
+	//   - []models.Category: 分类列表
+	//   - error: 如果出错会返回错误信息
+	FindAllCategories() ([]models.Category, error)
 }
 
 type postRepository struct{}
@@ -187,4 +193,19 @@ func (r *postRepository) Create(post *models.Post) (*models.Post, error) {
 
 	// 插入成功，返回包含 ID 的帖子对象
 	return post, nil
+}
+
+func (r *postRepository) FindAllCategories() ([]models.Category, error) {
+	var categories []models.Category
+
+	// 查询所有分类（按 ID 排序，确保顺序稳定）
+	err := databases.DB.Order("id ASC").Find(&categories).Error
+
+	// 如果查询失败，返回错误
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回分类列表
+	return categories, nil
 }

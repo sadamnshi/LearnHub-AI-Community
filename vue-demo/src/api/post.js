@@ -232,3 +232,47 @@ export async function createPost(postData) {
     throw new Error(error.message || '创建帖子时发生错误')
   }
 }
+
+/**
+ * 获取所有帖子分类（公开接口，无需登录）
+ * 
+ * @returns {Promise<CategoryInfo[]>} 分类列表
+ * @throws {Error} 如果获取失败
+ * 
+ * 响应数据结构示例：
+ * [
+ *   {
+ *     "id": 1,
+ *     "name": "技术分享",
+ *     "icon": "💻"
+ *   },
+ *   {
+ *     "id": 2,
+ *     "name": "生活杂谈",
+ *     "icon": "😊"
+ *   }
+ * ]
+ */
+export async function getCategories() {
+  try {
+    // 调用通用 request 函数，发送 GET 请求
+    const response = await request(`${API_BASE}/posts/categories`)
+
+    // 检查业务状态码
+    if (response.code !== 0) {
+      throw new Error(response.msg || '获取分类列表失败')
+    }
+
+    // 返回分类列表（data 直接是数组）
+    return response.data || []
+
+  } catch (error) {
+    console.error('❌ 获取分类列表错误:', error.message)
+    
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error(error.message || '获取分类列表时发生错误')
+  }
+}
+

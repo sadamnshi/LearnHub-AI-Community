@@ -274,3 +274,27 @@ func (ctl *PostController) CreatePost(c *gin.Context) {
 		"data": detail,
 	})
 }
+
+// GetCategories 获取所有分类列表（无需登录，公开接口）
+//
+// GET /api/posts/categories
+//
+// 返回所有可用的帖子分类，前端可用于帖子创建表单的分类选择
+func (ctl *PostController) GetCategories(c *gin.Context) {
+	categories, err := ctl.service.GetCategories()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":  500,
+			"msg":   "获取分类列表失败",
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// 统一响应格式
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "success",
+		"data": categories,
+	})
+}

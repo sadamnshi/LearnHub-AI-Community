@@ -120,7 +120,7 @@
           <h3>✨ 账号状态</h3>
           <div class="status-item">
             <span class="status-label">账号状态</span>
-            <span class="status-value active">✓ 正常</span>
+            <span class="status-value active">正常</span>
           </div>
           <div class="status-item">
             <span class="status-label">邮箱验证</span>
@@ -413,7 +413,7 @@ export default {
 
 .page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: transparent; /* 使用 App.vue 的全局流动渐变 */
   padding-top: 0;
 }
 
@@ -422,14 +422,15 @@ export default {
    ============================================================================ */
 
 .header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.2); /* 毛玻璃导航 */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 16px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .header-content {
@@ -446,24 +447,26 @@ export default {
   font-weight: 700;
   color: #1e293b;
   margin: 0;
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.5); /* 文字发光 */
 }
 
 .btn-logout-header {
   padding: 8px 16px;
-  background: #dc2626;
+  background: rgba(220, 38, 38, 0.7); /* 适配玻璃风格：半透明红 */
+  backdrop-filter: blur(4px);
   color: #fff;
-  border: none;
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-logout-header:hover {
-  background: #b91c1c;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.9);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
 }
 
 /* ============================================================================
@@ -574,20 +577,21 @@ export default {
    ============================================================================ */
 
 .profile-section {
-  background: #fff;
-  border-radius: 12px;
+  background: transparent; /* 由 App.vue 控制玻璃背景 */
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: none; /* App.vue 定义了全局 shadow */
 }
 
 /* 资料头部 */
 .profile-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.1); /* 轻透亮头部 */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   padding: 32px 24px;
   display: flex;
   gap: 24px;
   align-items: flex-start;
-  color: #fff;
+  color: #1e293b;
 }
 
 @media (max-width: 480px) {
@@ -609,22 +613,32 @@ export default {
   height: 100px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border: 4px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
 }
 
 .avatar-placeholder {
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  color: #1e293b;
   font-size: 40px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 4px solid rgba(255, 255, 255, 0.3);
+  border: 4px solid rgba(255, 255, 255, 0.5);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+}
+
+/* 头像交互动效 */
+.avatar-container:hover .avatar,
+.avatar-container:hover .avatar-placeholder {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 12px 32px rgba(255, 255, 255, 0.5);
 }
 
 /* 用户元数据 */
@@ -669,7 +683,7 @@ export default {
 /* 信息卡片 */
 .info-card {
   padding: 24px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .info-group {
@@ -689,11 +703,21 @@ export default {
   letter-spacing: 0.5px;
 }
 
+/* 信息交互动效 */
 .info-item {
   display: flex;
   gap: 12px;
   margin-bottom: 12px;
-  padding: 8px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background: transparent;
+}
+
+.info-item:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .info-item:last-child {
@@ -726,8 +750,8 @@ export default {
   display: flex;
   gap: 12px;
   padding: 24px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 480px) {
@@ -786,10 +810,10 @@ export default {
 }
 
 .sidebar-card {
-  background: #fff;
+  background: transparent; /* 背景交由App.vue层管控 */
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .sidebar-card h3 {
@@ -806,7 +830,10 @@ export default {
   gap: 8px;
 }
 
+/*快速菜单动效*/
 .menu-item {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -818,9 +845,28 @@ export default {
   font-size: 14px;
 }
 
+.menu-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background: rgba(102, 126, 234, 0.8);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+  border-radius: 4px;
+}
+
 .menu-item:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.5);
   color: #667eea;
+  padding-left: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.menu-item:hover::before {
+  transform: scaleY(1);
 }
 
 .menu-icon {
@@ -833,7 +879,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   font-size: 13px;
 }
 
@@ -850,8 +896,29 @@ export default {
   font-weight: 600;
 }
 
+/* 呼吸灯效果 */
 .status-value.active {
   color: #16a34a;
+  display: flex;
+  align-items: center;
+}
+
+.status-value.active::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  margin-right: 6px;
+  box-shadow: 0 0 8px #16a34a;
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
 }
 
 .status-value.verified {
@@ -890,13 +957,17 @@ export default {
   }
 }
 
+/* 模态框修正 */
 .modal {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
   border-radius: 12px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   max-width: 400px;
   width: 100%;
   animation: slideUp 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 @keyframes slideUp {
@@ -915,7 +986,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .modal-header h3 {
@@ -926,10 +997,10 @@ export default {
 }
 
 .modal-close {
-  background: none;
+  background: transparent;
   border: none;
   font-size: 24px;
-  color: #94a3b8;
+  color: #475569;
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -942,7 +1013,7 @@ export default {
 }
 
 .modal-close:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.5);
   color: #1e293b;
 }
 
@@ -954,8 +1025,8 @@ export default {
   display: flex;
   gap: 12px;
   padding: 20px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .modal-footer .btn {

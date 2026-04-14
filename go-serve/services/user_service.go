@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"gin_demo/models"
@@ -93,11 +94,26 @@ func (s *userService) Login(username, password string) (*models.User, error) {
 	return u, nil
 }
 
-// jwtSecret 演示用静态秘钥。生产环境：
-// 1. 使用环境变量或配置文件加载；
-// 2. 采用长度足够的随机字符串；
-// 3. 支持密钥轮换（Key Rotation）。
-var jwtSecret = []byte("CHANGE_ME_TO_ENV_SECRET")
+// jwtSecret 从环境变量加载。生产环境最佳实践：
+// 1. 使用环境变量或配置文件加载（避免硬编码）；
+// 2. 采用长度足够的随机字符串（建议 64+ 字符）；
+// 3. 支持密钥轮换（Key Rotation）；
+// 4. 定期更换密钥，使旧 Token 失效。
+//
+// 生成安全的 JWT 密钥命令：
+//   openssl rand -base64 64
+//
+// 然后将生成的值设置到环境变量 JWT_SECRET 中
+func GetJwtSecret() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		// 开发环境的默认值，生产环境必须设置
+		secret = "CHANGE_ME_TO_ENV_SECRET_IN_PRODUCTION"
+	}
+	return []byte(secret)
+}
+
+var jwtSecret = GetJwtSecret()
 
 // GenerateToken 根据用户信息签发 JWT。
 // Claims 设计：
