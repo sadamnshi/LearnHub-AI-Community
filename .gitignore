@@ -1,0 +1,46 @@
+# ===== 环境变量与机密文件 =====
+# 本地环境变量配置（包含敏感信息，不应提交）
+.env
+.env.local
+.env.*.local
+
+# ===== IDE 配置 =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ===== Go 编译产物 =====
+*.o
+*.a
+*.so
+*.dylib
+/bin
+/dist
+
+# ===== 依赖缓存 =====
+vendor/
+go.sum
+
+# ===== 构建与临时文件 =====
+*.tmp
+*.log
+*.prof
+
+# ===== 前端 =====
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+.cache/
+
+# ===== 数据库文件 =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== 系统文件 =====
+Thumbs.db
+.DS_Store

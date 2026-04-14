@@ -84,7 +84,7 @@
 </template>
 
 <script>
-import { createPost } from '../api/post'
+import { createPost, getCategories } from '../api/post'
 
 export default {
   name: 'CreatePostView',
@@ -96,14 +96,10 @@ export default {
         category_id: 0,
         tags: ''
       },
-      categories: [
-        { id: 1, name: '技术分享', icon: '💻' },
-        { id: 2, name: '生活杂谈', icon: '😊' },
-        { id: 3, name: '学习资源', icon: '📚' },
-        { id: 4, name: '问题求助', icon: '❓' }
-      ],
+      categories: [],
       loading: false,
-      error: ''
+      error: '',
+      categoriesLoading: true
     }
   },
   computed: {
@@ -115,7 +111,26 @@ export default {
         .filter(tag => tag.length > 0)
     }
   },
+  mounted() {
+    // 组件挂载时加载分类列表
+    this.loadCategories()
+  },
   methods: {
+    // 加载分类列表
+    async loadCategories() {
+      try {
+        this.categoriesLoading = true
+        this.categories = await getCategories()
+        console.log('✅ 分类加载成功:', this.categories)
+      } catch (err) {
+        console.error('❌ 分类加载失败:', err)
+        this.error = '加载分类失败，请刷新页面重试'
+        // 即使加载失败，也提供一个空分类列表，让用户可以继续发布
+        this.categories = []
+      } finally {
+        this.categoriesLoading = false
+      }
+    },
     async handleSubmit() {
       // 验证标题
       if (!this.form.title.trim()) {

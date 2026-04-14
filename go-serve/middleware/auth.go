@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"gin_demo/services"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -58,7 +59,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		parsed, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 			// 返回密钥，必须与 user_service.go 里 GenerateToken 用的密钥完全一致
 			// 只有密钥相同，签名验证才能通过
-			return []byte("CHANGE_ME_TO_ENV_SECRET"), nil
+			return services.GetJwtSecret(), nil
 		})
 
 		// 解析失败（Token 格式错误、签名不匹配、已过期等），拒绝请求

@@ -7,11 +7,6 @@ import (
 	"strings"
 )
 
-// 为什么在 services 包中定义？
-//   - services 包依赖这个接口
-//   - cache 包实现这个接口
-//   - 这样避免循环导入（services 不需要导入 cache）
-
 type PostDetailCacher interface {
 	// GetPostDetail 从缓存获取帖子详情
 	GetPostDetail(postID uint) (*PostDetail, error)
@@ -26,6 +21,9 @@ type PostService interface {
 
 	// CreatePost 创建新帖子
 	CreatePost(authorID uint, req *CreatePostRequest) (*PostDetail, error)
+
+	// GetCategories 获取所有帖子分类
+	GetCategories() ([]CategoryInfo, error)
 }
 
 // PostListResult 帖子列表结果（含分页信息）
@@ -398,4 +396,25 @@ func (s *postService) CreatePost(authorID uint, req *CreatePostRequest) (*PostDe
 	// 步骤 6️⃣：返回结果
 	// ═════════════════════════════════════════════════════════════════════════════════
 	return detail, nil
+}
+
+// GetCategories 获取所有分类
+func (s *postService) GetCategories() ([]CategoryInfo, error) {
+	// 从数据库查询所有分类
+	categories, err := s.repo.FindAllCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	// 将数据库模型转换为 DTO
+	result := make([]CategoryInfo, 0, len(categories))
+	for _, cat := range categories {
+		result = append(result, CategoryInfo{
+			ID:   cat.ID,
+			Name: cat.Name,
+			Icon: cat.Icon,
+		})
+	}
+
+	return result, nil
 }

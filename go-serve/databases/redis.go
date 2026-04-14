@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -11,28 +13,48 @@ import (
 // RDB 全局 Redis 客户端，其他包通过 databases.RDB 使用
 var RDB *redis.Client
 
+// mustGetEnv 获取环境变量，缺失时终止启动
+func mustGetEnv(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("关键环境变量缺失: %s", key)
+	}
+	return value
+}
+
+// mustGetEnvInt 获取整数类型环境变量，缺失或格式错误时终止启动
+func mustGetEnvInt(key string) int {
+	value := mustGetEnv(key)
+	intVal, err := strconv.Atoi(value)
+	if err != nil {
+		log.Fatalf("环境变量 %s 不是有效的整数: %v", key, err)
+	}
+	return intVal
+}
+
 // InitRedis 初始化 Redis 连接，启动时调用一次
 func InitRedis() {
-	// 第一步：创建客户端 + 连接池配置
-	// 此时不发任何网络请求，只是在内存中初始化配置对象和连接池
-	RDB = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // Redis 服务地址
-		Password: "",               // 无密码则留空
-		DB:       0,                // 使用默认数据库 0
+	// 第一步：从环境变量读取 Redis 配置
+	addr := mustGetEnv("REDIS_ADDR")
+	password := os.Getenv("REDIS_PASSWORD") // 密码允许为空
+	db := mustGetEnvInt("REDIS_DB")
+	poolSize := mustGetEnvInt("REDIS_POOL_SIZE")
+	minIdleConns := mustGetEnvInt("REDIS_MIN_IDLE_CONNS")
 
-		// 连接池配置（可选，按需调整）
-		PoolSize:     10, // 最大连接数，默认 10 * CPU核心数
-		MinIdleConns: 2,  // 最少保持 2 个空闲连接，减少冷启动延迟
+	// 第二步：创建客户端 + 连接池配置
+	RDB = redis.NewClient(&redis.Options{
+		Addr:         addr,
+		Password:     password,
+		DB:           db,
+		PoolSize:     poolSize,
+		MinIdleConns: minIdleConns,
 	})
 
-	// 第二步：主动 Ping —— 这才是第一次真正建立 TCP 连接的时刻
-	// 流程：TCP 三次握手 → 发送 PING 命令 → 收到 PONG → 连接归还连接池复用
-	// 如果 Redis 未启动或地址错误，这里会立即报错，程序启动失败（快速失败原则）
+	// 第三步：主动 Ping 检验连接（快速失败原则）
 	ctx := context.Background()
 	Result, err := RDB.Ping(ctx).Result()
 	if err != nil {
 		log.Fatalf("Redis 连接失败: %v", err)
 	}
 	fmt.Println("redis 连接成功:" + Result)
-
 }

@@ -122,10 +122,13 @@ func SetupRouter() *gin.Engine {
 		}
 
 		// 帖子路由
+		// ⚠️ 注意：Gin 路由顺序很重要！静态路由必须在动态路由（:id）前面
+		// 如果 /:id 在前面，/categories 会被当作 ID 参数处理
 		apiPost := api.Group("/posts")
 		{
-			apiPost.GET("/home", postController.GetPosts)     // 获取帖子列表（分页、筛选）
-			apiPost.GET("/:id", postController.GetPostDetail) // 获取帖子详情（单个帖子，使用旁路缓存）
+			apiPost.GET("/home", postController.GetPosts)            // 获取帖子列表（分页、筛选）
+			apiPost.GET("/categories", postController.GetCategories) // 获取分类列表（必须在 /:id 前面！）
+			apiPost.GET("/:id", postController.GetPostDetail)        // 获取帖子详情（单个帖子，使用旁路缓存）
 
 			// 需要登录的受保护帖子操作
 			apiPostAuth := apiPost.Group("").Use(middleware.AuthMiddleware())
