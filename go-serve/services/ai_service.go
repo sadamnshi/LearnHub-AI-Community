@@ -106,27 +106,13 @@ type historyResult struct {
 	err      error
 }
 
-// SendMessage 发送消息给 AI 并获取回复（支持多轮对话）
-//
-// ⚡ 进阶三阶段并发流水线（v2）：
-//
-//	在原有三阶段流水线的基础上，新增两项 Goroutine 进阶技术：
-//
-//	┌──────────────────────────────────────────────────────────────────────┐
-//	│ 阶段一（WaitGroup 并行）                                             │
-//	│   goroutine-1: 保存用户消息(DB写, ~20ms) ──┐                        │
-//	│   goroutine-2: 获取历史记录(DB读, ~30ms) ──┘ 并行，耗时≈30ms        │
-//	├──────────────────────────────────────────────────────────────────────┤
-//	│ 阶段二（Semaphore 限流 + 串行 AI API 调用）          ← 新增 ⭐       │
-//	│   先获取"并发令牌"（若令牌已被占满则等待），防止 API 限速             │
-//	│   → 调用 AI API(~1000ms) → 释放令牌                                 │
-//	├──────────────────────────────────────────────────────────────────────┤
-//	│ 阶段三（异步重试落库，fire-and-forget goroutine）    ← 升级 ⭐       │
-//	│   goroutine-3 内部加入指数退避重试（最多3次）                        │
-//	│   第1次失败 → 等500ms → 重试                                         │
-//	│   第2次失败 → 等1000ms → 重试                                        │
-//	│   第3次失败 → 记录日志，放弃（可接受的降级）                         │
-//	└──────────────────────────────────────────────────────────────────────┘
+// ├──────────────────────────────────────────────────────────────────────┤
+// │ 阶段三（异步重试落库，fire-and-forget goroutine）    ← 升级 ⭐       │
+// │   goroutine-3 内部加入指数退避重试（最多3次）                        │
+// │   第1次失败 → 等500ms → 重试                                         │
+// │   第2次失败 → 等1000ms → 重试                                        │
+// │   第3次失败 → 记录日志，放弃（可接受的降级）                         │
+// └──────────────────────────────────────────────────────────────────────┘
 func (s *aiServiceImpl) SendMessage(userID uint, message string) (string, error) {
 	// ══════════════════════════════════════════════════════════════════════
 	// 阶段一：并行执行「保存用户消息」和「获取历史记录」（WaitGroup）
@@ -169,22 +155,15 @@ func (s *aiServiceImpl) SendMessage(userID uint, message string) (string, error)
 		log.Printf("Failed to get chat history: %v", history.err)
 	}
 
-	// 由于阶段一两个操作并行发起，历史查询可能不含当前用户消息，手动追加
+	// 历史查询可能不含当前用户消息，手动追加
 	currentMsg := models.ChatMessage{UserID: userID, Role: "user", Content: message}
 	historyWithCurrent := append(history.messages, currentMsg)
 
-	// ══════════════════════════════════════════════════════════════════════
-	// 阶段二：Semaphore 限流 → 调用 AI API
-	// ══════════════════════════════════════════════════════════════════════
-	// 【新增】在调用 AI API 之前，先向信号量 channel 发送一个空结构体（"获取令牌"）。
-	// 如果当前已有 maxConcurrentAPICalls 个 goroutine 在调用 AI API，
-	// 这一步会阻塞，直到某个 goroutine 退出并"归还令牌"。
-	// 这就像排队取号：号码（令牌）就这么多，拿到号才能进服务区。
 	log.Printf("⏳ 等待 AI API 并发令牌... (当前信号量使用数: %d/%d)", len(s.semaphore), maxConcurrentAPICalls)
 	s.semaphore <- struct{}{} // 获取令牌（acquire），channel 满时此行阻塞
 
-	// 用 defer 确保函数退出时一定"归还令牌"，即使 AI API 调用 panic 也不会死锁
-	defer func() { <-s.semaphore }() // 释放令牌（release），从 channel 取出一个值腾出槽位
+	//执行到最后释放令牌
+	defer func() { <-s.semaphore }()
 
 	log.Printf("✅ 已获取 AI API 并发令牌，开始调用 (当前信号量使用数: %d/%d)", len(s.semaphore), maxConcurrentAPICalls)
 

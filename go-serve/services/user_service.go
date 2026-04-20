@@ -101,19 +101,18 @@ func (s *userService) Login(username, password string) (*models.User, error) {
 // 4. 定期更换密钥，使旧 Token 失效。
 //
 // 生成安全的 JWT 密钥命令：
-//   openssl rand -base64 64
+//
+//	openssl rand -base64 64
 //
 // 然后将生成的值设置到环境变量 JWT_SECRET 中
 func GetJwtSecret() []byte {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		// 开发环境的默认值，生产环境必须设置
-		secret = "CHANGE_ME_TO_ENV_SECRET_IN_PRODUCTION"
+		secret = "your_jwt_secret_key_here"
 	}
 	return []byte(secret)
 }
-
-var jwtSecret = GetJwtSecret()
 
 // GenerateToken 根据用户信息签发 JWT。
 // Claims 设计：
@@ -141,7 +140,7 @@ func (s *userService) GenerateToken(u *models.User) (string, error) {
 		"iss":  "gin_demo_app",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString(GetJwtSecret())
 }
 
 // Authenticate = Login + GenerateToken
