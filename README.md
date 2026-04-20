@@ -48,8 +48,8 @@ LearnHub AI Community 是一个基于 **Golang (Gin)** 和 **Vue.js** 构建的*
 │   ├── controllers/  # 控制层 (接收请求，参数校验：处理 AI、Post、User)
 │   ├── services/     # 业务逻辑层 (复杂的并发流水线、限流与指数重试)
 │   ├── repositories/ # 数据访问层 (封装数据库 CRUD 操作)
-│   ├── models/       # 数据模型 (MySQL 表映射)
-│   ├── databases/    # 中间件连接池 (MySQL、Redis 初始化)
+│   ├── models/       # 数据模型 (pg 表映射)
+│   ├── databases/    # 中间件连接池 (pg、Redis 初始化)
 │   ├── middleware/   # 核心中间件 (JWT 拦截鉴权、CORS 跨域处理)
 │   └── cache/        # 缓存层 (结合 Redis 处理高频查询)
 │
