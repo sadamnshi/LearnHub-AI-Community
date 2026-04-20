@@ -31,7 +31,7 @@ LearnHub AI Community 是一个基于 **Golang (Gin)** 和 **Vue.js** 构建的*
 
 ### ⚙️ 后端 (Backend : `go-serve`)
 - **核心框架**: Gin (高性能 Go Web 框架)
-- **ORM与数据库**: GORM + MySQL (结构化数据持久存储)
+- **ORM与数据库**: GORM + PostgreSQL (结构化数据持久存储)
 - **缓存与中间件**: Redis (加速读写与状态管理)
 - **AI 接入**: `go-openai` (兼容 OpenAI / 阿里云百炼大模型 API)
 - **跨域与鉴权**: 自定义 CORS 中间件 + 高度封装的 JWT Auth 拦截器
@@ -68,7 +68,7 @@ LearnHub AI Community 是一个基于 **Golang (Gin)** 和 **Vue.js** 构建的*
 请确保你的本地或服务器环境中已安装以下组件：
 - **Golang** (>= v1.18)
 - **Node.js** (>= v16) & npm/yarn/pnpm
-- **MySQL** (>= 8.0)
+- **PostgreSQL** (>= 12.0)
 - **Redis** (>= 6.0)
 
 ### 2. 后端部署 (Backend Setup)
@@ -84,8 +84,8 @@ LearnHub AI Community 是一个基于 **Golang (Gin)** 和 **Vue.js** 构建的*
 3. **环境配置**:
    将 `config/.env.example` 复制为 `config/.env`，并修改里面的配置：
    ```env
-   # 数据库配置
-   DB_DSN="root:你的密码@tcp(127.0.0.1:3306)/gin_demo?charset=utf8mb4&parseTime=True&loc=Local"
+   # PostgreSQL 数据库配置
+   DB_DSN="host=127.0.0.1 user=postgres password=你的密码 dbname=gin_demo port=5432 sslmode=disable"
    
    # Redis 配置
    REDIS_ADDR="127.0.0.1:6379"
