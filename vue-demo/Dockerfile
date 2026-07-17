@@ -1,4 +1,4 @@
-FROM node:20 AS builder
+FROM docker.m.daocloud.io/library/node:20 AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --i
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM docker.m.daocloud.io/library/nginx:1.27-alpine
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html

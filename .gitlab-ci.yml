@@ -18,7 +18,7 @@ variables:
 
 go_test:
   stage: verify
-  image: golang:1.25
+  image: docker.m.daocloud.io/library/golang:1.25
   cache:
     key: go-$CI_COMMIT_REF_SLUG
     paths:
@@ -30,7 +30,7 @@ go_test:
 
 frontend_build:
   stage: build
-  image: node:20
+  image: docker.m.daocloud.io/library/node:20
   cache:
     key: npm-$CI_COMMIT_REF_SLUG
     paths:
@@ -47,7 +47,7 @@ frontend_build:
 
 go_build:
   stage: build
-  image: golang:1.25
+  image: docker.m.daocloud.io/library/golang:1.25
   needs:
     - go_test
   cache:
@@ -67,9 +67,11 @@ go_build:
 
 frontend_image:
   stage: package
-  image: docker:27
+  image: docker.m.daocloud.io/library/docker:27
   services:
-    - docker:27-dind
+    - name: docker.m.daocloud.io/library/docker:27-dind
+      command:
+        - --registry-mirror=https://docker.m.daocloud.io
   needs:
     - frontend_build
   variables:
@@ -89,9 +91,11 @@ frontend_image:
 
 backend_image:
   stage: package
-  image: docker:27
+  image: docker.m.daocloud.io/library/docker:27
   services:
-    - docker:27-dind
+    - name: docker.m.daocloud.io/library/docker:27-dind
+      command:
+        - --registry-mirror=https://docker.m.daocloud.io
   needs:
     - go_build
   variables:
@@ -111,7 +115,7 @@ backend_image:
 
 deploy_ubuntu:
   stage: deploy
-  image: alpine:3.20
+  image: docker.m.daocloud.io/library/alpine:3.20
   needs:
     - backend_image
     - frontend_image
