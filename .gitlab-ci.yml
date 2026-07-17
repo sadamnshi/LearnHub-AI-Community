@@ -68,18 +68,8 @@ go_build:
 frontend_image:
   stage: package
   image: docker.m.daocloud.io/library/docker:27
-  services:
-    - name: docker.m.daocloud.io/library/docker:27-dind
-      alias: docker
-      command:
-        - --registry-mirror=https://docker.m.daocloud.io
   needs:
     - frontend_build
-  variables:
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_TLS_VERIFY: "1"
-    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
   rules:
     - if: $CI_COMMIT_BRANCH
   before_script:
@@ -96,18 +86,8 @@ frontend_image:
 backend_image:
   stage: package
   image: docker.m.daocloud.io/library/docker:27
-  services:
-    - name: docker.m.daocloud.io/library/docker:27-dind
-      alias: docker
-      command:
-        - --registry-mirror=https://docker.m.daocloud.io
   needs:
     - go_build
-  variables:
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_TLS_VERIFY: "1"
-    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
   rules:
     - if: $CI_COMMIT_BRANCH
   before_script:
