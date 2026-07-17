@@ -37,7 +37,7 @@ frontend_build:
       - .cache/npm/
   script:
     - cd vue-demo
-    - if [ -f package-lock.json ]; then npm ci; else npm install; fi
+    - if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi
     - npm run build
   artifacts:
     name: frontend-dist-$CI_COMMIT_SHORT_SHA

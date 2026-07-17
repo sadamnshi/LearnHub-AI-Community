@@ -8,14 +8,14 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o gin-demo ./main.go
 
-FROM alpine:3.20
+FROM scratch
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY --from=builder /app/gin-demo /app/gin-demo
 
 EXPOSE 8080
 
-CMD ["/app/gin-demo"]
+ENTRYPOINT ["/app/gin-demo"]
