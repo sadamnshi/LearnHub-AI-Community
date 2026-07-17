@@ -1,233 +1,154 @@
 <template>
-  <section class="page">
-    <!-- 顶部导航 -->
+  <section class="profile-page">
+    <!-- Header -->
     <header class="header">
-      <div class="header-content">
+      <div class="header-inner">
         <h1>用户中心</h1>
-        <button @click="handleLogout" class="btn-logout-header">退出登录</button>
+        <button @click="handleLogout" class="btn-logout">退出登录</button>
       </div>
     </header>
 
     <div class="container">
-      <!-- 左侧：用户信息卡片 -->
+      <!-- Main -->
       <div class="main-content">
-        <!-- 加载状态 -->
-        <div v-if="loading" class="loading-container">
+        <!-- Loading -->
+        <div v-if="loading" class="loading-container glass-card">
           <div class="spinner"></div>
           <p>加载中...</p>
         </div>
 
-        <!-- 错误提示 -->
-        <div v-if="error && !loading" class="alert alert-error">
-          <span class="alert-icon">⚠️</span>
-          <div>
-            <p class="alert-title">加载失败</p>
-            <p class="alert-message">{{ error }}</p>
-          </div>
+        <!-- Error -->
+        <div v-if="error && !loading" class="alert-error glass-card">
+          <span>⚠️</span>
+          <div><strong>加载失败</strong><p>{{ error }}</p></div>
         </div>
 
-        <!-- 用户信息展示 -->
-        <div v-if="profile && !loading" class="profile-section">
-          <!-- 头像和基本信息 -->
+        <!-- Profile -->
+        <div v-if="profile && !loading" class="profile-card glass-card">
+          <!-- Profile Header -->
           <div class="profile-header">
             <div class="avatar-container">
-              <img
-                v-if="profile.avatar"
-                :src="profile.avatar"
-                alt="头像"
-                class="avatar"
-              />
+              <img v-if="profile.avatar" :src="profile.avatar" alt="头像" class="avatar" />
               <div v-else class="avatar-placeholder">
                 {{ profile.username ? profile.username[0].toUpperCase() : '?' }}
               </div>
             </div>
-
             <div class="user-meta">
               <h2 class="username">{{ profile.username }}</h2>
-              <div class="role-badge" :class="'badge-' + profile.role">
-                {{ roleLabel(profile.role) }}
-              </div>
-              <p class="user-id">用户 ID: {{ profile.id }}</p>
+              <div class="role-badge">{{ roleLabel(profile.role) }}</div>
+              <p class="user-id">ID: {{ profile.id }}</p>
             </div>
           </div>
 
-          <!-- 详细信息卡片 -->
-          <div class="info-card">
+          <!-- Info -->
+          <div class="info-section">
             <div class="info-group">
-              <h3 class="group-title">📧 联系方式</h3>
+              <h3>联系方式</h3>
               <div class="info-item">
-                <span class="item-label">邮箱</span>
-                <span class="item-value">{{ profile.email || '暂未填写' }}</span>
+                <span class="info-label">邮箱</span>
+                <span class="info-value">{{ profile.email || '暂未填写' }}</span>
               </div>
             </div>
-
             <div class="info-group">
-              <h3 class="group-title">👤 个人信息</h3>
-              <div class="info-item">
-                <span class="item-label">个人简介</span>
-                <p class="item-value bio">
-                  {{ profile.bio || '这个人很懒，什么都没写～' }}
-                </p>
-              </div>
+              <h3>个人简介</h3>
+              <p class="bio">{{ profile.bio || '这个人很懒，什么都没写～' }}</p>
             </div>
-
             <div class="info-group">
-              <h3 class="group-title">📅 账号信息</h3>
+              <h3>账号信息</h3>
               <div class="info-item">
-                <span class="item-label">注册时间</span>
-                <span class="item-value">{{ formatDate(profile.created_at) }}</span>
+                <span class="info-label">注册时间</span>
+                <span class="info-value">{{ formatDate(profile.created_at) }}</span>
               </div>
               <div class="info-item">
-                <span class="item-label">最后更新</span>
-                <span class="item-value">{{ formatDate(profile.updated_at) }}</span>
+                <span class="info-label">最后更新</span>
+                <span class="info-value">{{ formatDate(profile.updated_at) }}</span>
               </div>
             </div>
           </div>
 
-          <!-- 操作按钮组 -->
-          <div class="action-buttons">
-            <button @click="loadProfile" :disabled="loading" class="btn btn-primary">
-              🔄 刷新信息
-            </button>
-            <button @click="showChangePassword = true" class="btn btn-secondary">
-              🔐 修改密码
-            </button>
+          <!-- Actions -->
+          <div class="action-bar">
+            <button @click="loadProfile" :disabled="loading" class="btn-glass">刷新信息</button>
+            <button @click="showChangePassword = true" class="btn-accent">修改密码</button>
           </div>
         </div>
       </div>
 
-      <!-- 右侧边栏：快速操作 -->
+      <!-- Sidebar -->
       <aside class="sidebar">
-        <div class="sidebar-card">
-          <h3>⚡ 快速操作</h3>
+        <div class="sidebar-card glass-card">
+          <h3>快速操作</h3>
           <nav class="quick-menu">
             <a href="#" class="menu-item" @click.prevent="loadProfile">
-              <span class="menu-icon">🔄</span>
-              <span>刷新信息</span>
+              <span class="menu-dot"></span>刷新信息
             </a>
             <a href="#" class="menu-item" @click.prevent="showChangePassword = true">
-              <span class="menu-icon">🔐</span>
-              <span>修改密码</span>
+              <span class="menu-dot"></span>修改密码
             </a>
-            <a href="/" class="menu-item">
-              <span class="menu-icon">🏠</span>
-              <span>返回首页</span>
-            </a>
+            <router-link to="/" class="menu-item">
+              <span class="menu-dot"></span>返回首页
+            </router-link>
           </nav>
         </div>
 
-        <div class="sidebar-card">
-          <h3>✨ 账号状态</h3>
-          <div class="status-item">
-            <span class="status-label">账号状态</span>
-            <span class="status-value active">正常</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">邮箱验证</span>
-            <span v-if="profile" class="status-value" :class="profile.email ? 'verified' : 'unverified'">
-              {{ profile.email ? '✓ 已验证' : '○ 未验证' }}
+        <div class="sidebar-card glass-card">
+          <h3>账号状态</h3>
+          <div class="status-row">
+            <span>账号状态</span>
+            <span class="status-active">
+              <span class="pulse-dot"></span> 正常
             </span>
-            <span v-else class="status-value unverified">○ 加载中...</span>
+          </div>
+          <div class="status-row">
+            <span>邮箱验证</span>
+            <span v-if="profile" :class="profile.email ? 'status-verified' : 'status-unverified'">
+              {{ profile.email ? '已验证' : '未验证' }}
+            </span>
           </div>
         </div>
       </aside>
     </div>
 
-    <!-- 修改密码模态框 -->
-    <div v-if="showChangePassword" class="modal-overlay" @click="closeModal">
-      <div class="modal" @click.stop>
-        <div class="modal-header">
-          <h3>修改密码</h3>
-          <button @click="closeModal" class="modal-close">✕</button>
-        </div>
-
-        <div class="modal-body">
-          <!-- 错误提示 -->
-          <div v-if="passwordError" class="alert alert-error modal-alert">
-            <span class="alert-icon">⚠️</span>
-            <p>{{ passwordError }}</p>
+    <!-- Password Modal -->
+    <transition name="modal-fade">
+      <div v-if="showChangePassword" class="modal-overlay" @click="closeModal">
+        <div class="modal glass-card" @click.stop>
+          <div class="modal-header">
+            <h3>修改密码</h3>
+            <button @click="closeModal" class="modal-close">✕</button>
           </div>
+          <div class="modal-body">
+            <div v-if="passwordError" class="alert-error modal-alert">{{ passwordError }}</div>
+            <div v-if="passwordSuccess" class="alert-success modal-alert">{{ passwordSuccess }}</div>
 
-          <!-- 成功提示 -->
-          <div v-if="passwordSuccess" class="alert alert-success modal-alert">
-            <span class="alert-icon">✓</span>
-            <p>{{ passwordSuccess }}</p>
+            <form @submit.prevent="submitChangePassword">
+              <div class="form-field">
+                <label>旧密码 *</label>
+                <input v-model="passwordForm.oldPassword" type="password" placeholder="请输入旧密码" required :disabled="changingPassword" />
+              </div>
+              <div class="form-field">
+                <label>新密码 *</label>
+                <input v-model="passwordForm.newPassword" type="password" placeholder="至少 6 位" required minlength="6" :disabled="changingPassword" />
+                <small class="form-hint">建议包含大小写字母和数字</small>
+              </div>
+              <div class="form-field">
+                <label>确认新密码 *</label>
+                <input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入" required :disabled="changingPassword" />
+              </div>
+              <div v-if="passwordForm.newPassword && passwordForm.confirmPassword" class="password-match" :class="{ match: passwordForm.newPassword === passwordForm.confirmPassword }">
+                {{ passwordForm.newPassword === passwordForm.confirmPassword ? '✓ 密码匹配' : '✕ 密码不匹配' }}
+              </div>
+            </form>
           </div>
-
-          <!-- 密码输入表单 -->
-          <form @submit.prevent="submitChangePassword">
-            <div class="form-group">
-              <label for="oldPassword" class="form-label">旧密码 *</label>
-              <input
-                id="oldPassword"
-                v-model="passwordForm.oldPassword"
-                type="password"
-                class="form-input"
-                placeholder="请输入旧密码"
-                required
-                :disabled="changingPassword"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="newPassword" class="form-label">新密码 *</label>
-              <input
-                id="newPassword"
-                v-model="passwordForm.newPassword"
-                type="password"
-                class="form-input"
-                placeholder="请输入新密码（至少 6 位）"
-                required
-                minlength="6"
-                :disabled="changingPassword"
-              />
-              <small class="form-hint">密码长度至少 6 位，建议包含大小写字母和数字</small>
-            </div>
-
-            <div class="form-group">
-              <label for="confirmPassword" class="form-label">确认新密码 *</label>
-              <input
-                id="confirmPassword"
-                v-model="passwordForm.confirmPassword"
-                type="password"
-                class="form-input"
-                placeholder="请再次输入新密码"
-                required
-                :disabled="changingPassword"
-              />
-            </div>
-
-            <!-- 密码匹配提示 -->
-            <div v-if="passwordForm.newPassword && passwordForm.confirmPassword" class="password-check">
-              <span
-                v-if="passwordForm.newPassword === passwordForm.confirmPassword"
-                class="check-success"
-              >
-                ✓ 密码匹配
-              </span>
-              <span v-else class="check-error">✕ 密码不匹配</span>
-            </div>
-          </form>
-        </div>
-
-        <div class="modal-footer">
-          <button
-            @click="closeModal"
-            :disabled="changingPassword"
-            class="btn btn-secondary"
-          >
-            取消
-          </button>
-          <button
-            @click="submitChangePassword"
-            :disabled="changingPassword || !isPasswordFormValid"
-            class="btn btn-primary"
-          >
-            {{ changingPassword ? '处理中...' : '确认修改' }}
-          </button>
+          <div class="modal-footer">
+            <button @click="closeModal" :disabled="changingPassword" class="btn-glass">取消</button>
+            <button @click="submitChangePassword" :disabled="changingPassword || !isPasswordFormValid" class="btn-accent">
+              {{ changingPassword ? '处理中...' : '确认修改' }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
   </section>
 </template>
 
@@ -238,25 +159,17 @@ export default {
   name: 'ProfileView',
   data() {
     return {
-      // 个人资料
       profile: null,
       loading: false,
       error: '',
-
-      // 修改密码相关
       showChangePassword: false,
       changingPassword: false,
       passwordError: '',
       passwordSuccess: '',
-      passwordForm: {
-        oldPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }
+      passwordForm: { oldPassword: '', newPassword: '', confirmPassword: '' }
     }
   },
   computed: {
-    // 密码表单验证
     isPasswordFormValid() {
       return (
         this.passwordForm.oldPassword.length > 0 &&
@@ -266,950 +179,645 @@ export default {
       )
     }
   },
-  mounted() {
-    this.loadProfile()
-  },
+  mounted() { this.loadProfile() },
   methods: {
-    /**
-     * 加载用户资料
-     */
     async loadProfile() {
       this.loading = true
       this.error = ''
       try {
         const response = await getUserProfile()
-        // 后端返回 { code: 0, msg: "...", data: { data: user } } 格式
-        console.log('getUserProfile response:', response)
         this.profile = response.data?.data || response.data
-        
-        // 确保 profile 不为 null
-        if (!this.profile) {
-          this.error = '用户信息为空'
-        }
+        if (!this.profile) this.error = '用户信息为空'
       } catch (error) {
         this.error = error.message || '加载用户信息失败'
-        console.error('Error loading profile:', error)
-        // Token 过期，2 秒后跳转到登录页
         if (error.message.includes('401') || error.message.includes('token')) {
-          setTimeout(() => {
-            this.$router.push('/login')
-          }, 2000)
+          setTimeout(() => { this.$router.push('/login') }, 2000)
         }
       } finally {
         this.loading = false
       }
     },
-
-    /**
-     * 关闭修改密码模态框
-     */
     closeModal() {
       this.showChangePassword = false
-      // 清空表单和提示
       setTimeout(() => {
-        this.passwordForm = {
-          oldPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        }
+        this.passwordForm = { oldPassword: '', newPassword: '', confirmPassword: '' }
         this.passwordError = ''
         this.passwordSuccess = ''
       }, 300)
     },
-
-    /**
-     * 提交修改密码表单
-     */
     async submitChangePassword() {
-      // 验证表单
-      if (!this.isPasswordFormValid) {
-        this.passwordError = '请检查密码输入'
-        return
-      }
-
+      if (!this.isPasswordFormValid) return
       this.changingPassword = true
       this.passwordError = ''
       this.passwordSuccess = ''
-
       try {
-        const response = await updatePassword({
+        await updatePassword({
           old_password: this.passwordForm.oldPassword,
           new_password: this.passwordForm.newPassword
         })
-
-        // 修改成功
         this.passwordSuccess = '密码修改成功！'
-        
-        // 2 秒后关闭模态框
-        setTimeout(() => {
-          this.closeModal()
-        }, 2000)
+        setTimeout(() => { this.closeModal() }, 2000)
       } catch (error) {
-        // 密码修改失败
         if (error.message.includes('旧密码')) {
           this.passwordError = '旧密码错误，请重新输入'
         } else if (error.message.includes('相同')) {
           this.passwordError = '新密码不能与旧密码相同'
         } else {
-          this.passwordError = error.message || '密码修改失败，请稍后重试'
+          this.passwordError = error.message || '密码修改失败'
         }
       } finally {
         this.changingPassword = false
       }
     },
-
-    /**
-     * 退出登录
-     */
     handleLogout() {
       if (confirm('确定要退出登录吗？')) {
         logout()
         this.$router.push('/login')
       }
     },
-
-    /**
-     * 将后端 role 字段转换为中文显示
-     */
     roleLabel(role) {
-      const map = {
-        admin: '管理员',
-        moderator: '版主',
-        user: '普通用户'
-      }
-      return map[role] || role || '未知'
+      return { admin: '管理员', moderator: '版主', user: '普通用户' }[role] || role || '未知'
     },
-
-    /**
-     * 格式化日期时间
-     */
     formatDate(dateString) {
       if (!dateString) return '—'
       try {
-        const date = new Date(dateString)
-        return date.toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
+        return new Date(dateString).toLocaleString('zh-CN', {
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit'
         })
-      } catch {
-        return dateString
-      }
+      } catch { return dateString }
     }
   }
 }
 </script>
 
 <style scoped>
-/* ============================================================================
-   全局样式
-   ============================================================================ */
-
-* {
-  box-sizing: border-box;
-}
-
-.page {
-  min-height: 100vh;
-  background: transparent; /* 使用 App.vue 的全局流动渐变 */
-  padding-top: 0;
-}
-
-/* ============================================================================
-   顶部导航栏
-   ============================================================================ */
+/* ═══════════════════════════════════════════════════════════════════════
+   Header
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .header {
-  background: rgba(255, 255, 255, 0.2); /* 毛玻璃导航 */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(12, 10, 29, 0.6);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.header-content {
+.header-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: var(--space-md) var(--space-lg);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .header h1 {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary);
   margin: 0;
-  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.5); /* 文字发光 */
 }
 
-.btn-logout-header {
+.btn-logout {
   padding: 8px 16px;
-  background: rgba(220, 38, 38, 0.7); /* 适配玻璃风格：半透明红 */
-  backdrop-filter: blur(4px);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  color: var(--danger);
+  border-radius: var(--glass-radius-xs);
   cursor: pointer;
+  font-size: 13px;
   font-weight: 600;
-  font-size: 14px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
-.btn-logout-header:hover {
-  background: rgba(220, 38, 38, 0.9);
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+.btn-logout:hover {
+  background: rgba(248, 113, 113, 0.25);
+  transform: translateY(-1px);
 }
 
-/* ============================================================================
-   主容器和布局
-   ============================================================================ */
+/* ═══════════════════════════════════════════════════════════════════════
+   Layout
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: var(--space-xl) var(--space-lg);
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-lg);
 }
 
-@media (max-width: 768px) {
-  .container {
-    grid-template-columns: 1fr;
-    padding: 16px 12px;
-    gap: 16px;
-  }
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
 }
 
-/* ============================================================================
-   加载状态
-   ============================================================================ */
+/* ═══════════════════════════════════════════════════════════════════════
+   Loading / Error
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .loading-container {
-  background: #fff;
-  border-radius: 12px;
-  padding: 48px 24px;
+  padding: var(--space-2xl);
   text-align: center;
+  color: var(--text-tertiary);
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e2e8f0;
-  border-top-color: #667eea;
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.08);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  margin: 0 auto 16px;
+  margin: 0 auto var(--space-md);
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ============================================================================
-   提示信息
-   ============================================================================ */
-
-.alert {
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 20px;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.alert-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.alert-title {
-  font-weight: 600;
-  margin: 0 0 4px 0;
-  font-size: 14px;
-}
-
-.alert-message {
-  margin: 0;
-  font-size: 13px;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .alert-error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.alert-success {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-.modal-alert {
-  margin-bottom: 16px;
-}
-
-/* ============================================================================
-   主要内容区域
-   ============================================================================ */
-
-.main-content {
+  padding: var(--space-md);
+  background: var(--danger-glow);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: var(--glass-radius-sm);
+  color: var(--danger);
+  font-size: 14px;
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  gap: var(--space-sm);
 }
 
-/* ============================================================================
-   用户资料卡片
-   ============================================================================ */
+.alert-error strong { display: block; margin-bottom: 4px; }
+.alert-error p { margin: 0; font-size: 13px; }
 
-.profile-section {
-  background: transparent; /* 由 App.vue 控制玻璃背景 */
-  border-radius: 16px;
+/* ═══════════════════════════════════════════════════════════════════════
+   Profile Card
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.profile-card {
   overflow: hidden;
-  box-shadow: none; /* App.vue 定义了全局 shadow */
+  animation: fadeInUp 0.5s var(--ease-out-expo);
 }
 
-/* 资料头部 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .profile-header {
-  background: rgba(255, 255, 255, 0.1); /* 轻透亮头部 */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 32px 24px;
+  padding: var(--space-xl);
   display: flex;
-  gap: 24px;
+  gap: var(--space-lg);
   align-items: flex-start;
-  color: #1e293b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-@media (max-width: 480px) {
-  .profile-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 24px 16px;
-  }
-}
+.avatar-container { flex-shrink: 0; }
 
-/* 头像 */
-.avatar-container {
-  flex-shrink: 0;
+.avatar, .avatar-placeholder {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  transition: all var(--duration-slow) var(--ease-spring);
 }
 
 .avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
   object-fit: cover;
-  border: 4px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
 }
 
 .avatar-placeholder {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--accent-gradient-soft);
   backdrop-filter: blur(8px);
-  color: #1e293b;
-  font-size: 40px;
+  color: var(--text-primary);
+  font-size: 36px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 4px solid rgba(255, 255, 255, 0.5);
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
 }
 
-/* 头像交互动效 */
 .avatar-container:hover .avatar,
 .avatar-container:hover .avatar-placeholder {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 12px 32px rgba(255, 255, 255, 0.5);
+  transform: scale(1.08) rotate(3deg);
+  box-shadow: 0 12px 32px var(--accent-glow);
 }
 
-/* 用户元数据 */
-.user-meta {
-  flex: 1;
-}
+.user-meta { flex: 1; }
 
 .username {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
   margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
 }
 
 .role-badge {
   display: inline-block;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
-  margin-bottom: 12px;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.badge-admin {
-  background: rgba(255, 255, 255, 0.25) !important;
-}
-
-.badge-moderator {
-  background: rgba(255, 255, 255, 0.25) !important;
-}
-
-.badge-user {
-  background: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(129, 140, 248, 0.12);
+  color: var(--accent-primary);
+  border: 1px solid rgba(129, 140, 248, 0.2);
+  margin-bottom: 8px;
 }
 
 .user-id {
   margin: 0;
   font-size: 13px;
-  opacity: 0.9;
+  color: var(--text-tertiary);
 }
 
-/* 信息卡片 */
-.info-card {
-  padding: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+/* Info Section */
+.info-section {
+  padding: var(--space-lg) var(--space-xl);
 }
 
 .info-group {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
 }
 
-.info-group:last-child {
-  margin-bottom: 0;
-}
+.info-group:last-child { margin-bottom: 0; }
 
-.group-title {
-  font-size: 14px;
+.info-group h3 {
+  font-size: 13px;
   font-weight: 600;
-  color: #475569;
-  margin: 0 0 12px 0;
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-md) 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
-/* 信息交互动效 */
 .info-item {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  background: transparent;
+  gap: var(--space-md);
+  padding: 10px 14px;
+  border-radius: var(--glass-radius-xs);
+  margin-bottom: 6px;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
 .info-item:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.04);
   transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.info-item:last-child {
-  margin-bottom: 0;
-}
-
-.item-label {
-  width: 100px;
+.info-label {
+  width: 90px;
   flex-shrink: 0;
-  color: #64748b;
-  font-weight: 500;
+  color: var(--text-tertiary);
   font-size: 13px;
+  font-weight: 500;
 }
 
-.item-value {
-  flex: 1;
-  color: #1e293b;
-  word-break: break-word;
+.info-value {
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
 .bio {
-  color: #475569;
+  color: var(--text-secondary);
   font-style: italic;
-  line-height: 1.6;
-}
-
-/* 操作按钮 */
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  padding: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-@media (max-width: 480px) {
-  .action-buttons {
-    flex-direction: column;
-  }
-}
-
-.btn {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
+  line-height: 1.7;
   font-size: 14px;
-  transition: all 0.3s ease;
+  padding: 10px 14px;
+  margin: 0;
+}
+
+/* Actions */
+.action-bar {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-xl);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+.btn-glass {
+  padding: 10px 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: var(--glass-radius-xs);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
-.btn-primary:hover:not(:disabled) {
+.btn-glass:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  transform: translateY(-1px);
+}
+
+.btn-glass:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-accent {
+  padding: 10px 20px;
+  background: var(--accent-gradient);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--glass-radius-xs);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--duration-normal) var(--ease-spring);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn-accent:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 20px var(--accent-glow);
 }
 
-.btn-secondary {
-  background: #e2e8f0;
-  color: #475569;
-}
+.btn-accent:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-secondary:hover:not(:disabled) {
-  background: #cbd5e1;
-  transform: translateY(-2px);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ============================================================================
-   右侧边栏
-   ============================================================================ */
+/* ═══════════════════════════════════════════════════════════════════════
+   Sidebar
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-md);
+  animation: fadeInUp 0.6s var(--ease-out-expo) 100ms both;
 }
 
 .sidebar-card {
-  background: transparent; /* 背景交由App.vue层管控 */
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: none;
+  padding: var(--space-lg);
 }
 
 .sidebar-card h3 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  color: #1e293b;
+  margin: 0 0 var(--space-md) 0;
+  font-size: 15px;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
-/* 快速菜单 */
 .quick-menu {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
-/*快速菜单动效*/
 .menu-item {
   position: relative;
-  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 12px;
-  color: #475569;
+  color: var(--text-secondary);
   text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  border-radius: var(--glass-radius-xs);
   font-size: 14px;
-}
-
-.menu-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 4px;
-  background: rgba(102, 126, 234, 0.8);
-  transform: scaleY(0);
-  transition: transform 0.3s ease;
-  border-radius: 4px;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
 .menu-item:hover {
-  background: rgba(255, 255, 255, 0.5);
-  color: #667eea;
-  padding-left: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  padding-left: 18px;
 }
 
-.menu-item:hover::before {
-  transform: scaleY(1);
+.menu-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  opacity: 0.5;
+  transition: opacity var(--duration-fast);
 }
 
-.menu-icon {
-  font-size: 16px;
-}
+.menu-item:hover .menu-dot { opacity: 1; }
 
-/* 账号状态 */
-.status-item {
+.status-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   font-size: 13px;
+  color: var(--text-secondary);
 }
 
-.status-item:last-child {
-  border-bottom: none;
-}
+.status-row:last-child { border-bottom: none; }
 
-.status-label {
-  color: #64748b;
-  font-weight: 500;
-}
-
-.status-value {
+.status-active {
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
 }
 
-/* 呼吸灯效果 */
-.status-value.active {
-  color: #16a34a;
-  display: flex;
-  align-items: center;
-}
-
-.status-value.active::before {
-  content: '';
-  display: inline-block;
+.pulse-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #16a34a;
-  margin-right: 6px;
-  box-shadow: 0 0 8px #16a34a;
-  animation: pulseGreen 2s infinite;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success-glow);
+  animation: pulse 2s infinite;
 }
 
-@keyframes pulseGreen {
-  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
 }
 
-.status-value.verified {
-  color: #16a34a;
-}
+.status-verified { color: var(--success); font-weight: 600; }
+.status-unverified { color: var(--warning); font-weight: 600; }
 
-.status-value.unverified {
-  color: #ea580c;
-}
-
-/* ============================================================================
-   模态框
-   ============================================================================ */
+/* ═══════════════════════════════════════════════════════════════════════
+   Modal
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 16px;
-  animation: fadeIn 0.3s ease;
+  padding: var(--space-md);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 模态框修正 */
 .modal {
-  background: rgba(255, 255, 255, 0.4) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-  max-width: 400px;
+  max-width: 420px;
   width: 100%;
-  animation: slideUp 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(20, 18, 40, 0.85) !important;
+  backdrop-filter: blur(32px) saturate(1.5) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(1.5) !important;
+  border: 1px solid var(--glass-border-bright) !important;
+  animation: modalIn 0.35s var(--ease-spring);
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+@keyframes modalIn {
+  from { transform: translateY(20px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
 }
+
+.modal-fade-enter-active { transition: opacity 0.3s; }
+.modal-fade-leave-active { transition: opacity 0.2s; }
+.modal-fade-enter-from,
+.modal-fade-leave-to { opacity: 0; }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding: var(--space-lg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
-  color: #1e293b;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
 .modal-close {
-  background: transparent;
+  background: none;
   border: none;
-  font-size: 24px;
-  color: #475569;
+  color: var(--text-tertiary);
+  font-size: 20px;
   cursor: pointer;
-  padding: 0;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s;
+  border-radius: 8px;
+  transition: all var(--duration-fast);
 }
 
 .modal-close:hover {
-  background: rgba(255, 255, 255, 0.5);
-  color: #1e293b;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
 }
 
-.modal-body {
-  padding: 20px;
-}
+.modal-body { padding: var(--space-lg); }
+
+.modal-alert { margin-bottom: var(--space-md); }
 
 .modal-footer {
   display: flex;
-  gap: 12px;
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.2);
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.modal-footer .btn {
-  flex: 1;
+.modal-footer .btn-glass,
+.modal-footer .btn-accent { flex: 1; justify-content: center; }
+
+/* Form fields in modal */
+.form-field {
+  margin-bottom: var(--space-md);
 }
 
-/* ============================================================================
-   表单
-   ============================================================================ */
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group:last-of-type {
-  margin-bottom: 8px;
-}
-
-.form-label {
+.form-field label {
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
-.form-input {
+.form-field input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  padding: 11px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--glass-radius-xs);
   font-size: 14px;
-  transition: all 0.2s;
+  color: var(--text-primary);
   font-family: inherit;
-}
-
-.form-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
-.form-input:disabled {
-  background: #f1f5f9;
-  color: #94a3b8;
-  cursor: not-allowed;
+.form-field input::placeholder { color: var(--text-tertiary); }
+
+.form-field input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
+
+.form-field input:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .form-hint {
   display: block;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
   margin-top: 6px;
 }
 
-/* 密码检查 */
-.password-check {
+.password-match {
+  text-align: center;
+  padding: 8px;
+  border-radius: var(--glass-radius-xs);
   font-size: 13px;
   font-weight: 600;
-  margin: 12px 0 16px 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-align: center;
+  color: var(--danger);
+  background: var(--danger-glow);
+  margin-bottom: var(--space-md);
 }
 
-.check-success {
-  color: #16a34a;
-  background: #dcfce7;
-  display: block;
+.password-match.match {
+  color: var(--success);
+  background: var(--success-glow);
 }
 
-.check-error {
-  color: #dc2626;
-  background: #fee2e2;
-  display: block;
+.alert-success {
+  padding: 12px 16px;
+  background: var(--success-glow);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: var(--glass-radius-xs);
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 500;
 }
 
-/* ============================================================================
-   响应式设计
-   ============================================================================ */
+/* ═══════════════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .container {
     grid-template-columns: 1fr;
+    padding: var(--space-md);
   }
-
   .sidebar {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: var(--space-sm);
   }
-}
-
-@media (max-width: 768px) {
-  .header h1 {
-    font-size: 24px;
-  }
-
-  .profile-header {
-    padding: 20px 16px;
-    gap: 16px;
-  }
-
-  .avatar,
-  .avatar-placeholder {
-    width: 80px;
-    height: 80px;
-    font-size: 32px;
-  }
-
-  .username {
-    font-size: 24px;
-  }
-
-  .info-card {
-    padding: 16px;
-  }
-
-  .action-buttons {
-    padding: 16px;
-  }
-
-  .sidebar {
-    grid-template-columns: 1fr;
-  }
-
-  .modal {
-    max-width: 90%;
-  }
+  .profile-header { flex-direction: column; align-items: center; text-align: center; }
 }
 
 @media (max-width: 480px) {
-  .page {
-    padding-top: 0;
-  }
-
-  .header-content {
-    padding: 0 16px;
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
-  }
-
-  .header h1 {
-    font-size: 20px;
-  }
-
-  .btn-logout-header {
-    width: 100%;
-  }
-
-  .container {
-    padding: 16px;
-    gap: 12px;
-  }
-
-  .profile-header {
-    padding: 16px;
-  }
-
-  .avatar,
-  .avatar-placeholder {
-    width: 70px;
-    height: 70px;
-    font-size: 28px;
-  }
-
-  .username {
-    font-size: 20px;
-  }
-
-  .item-label {
-    width: 70px;
-  }
-
-  .modal {
-    max-width: calc(100% - 32px);
-  }
-
-  .modal-header,
-  .modal-body,
-  .modal-footer {
-    padding: 16px;
-  }
+  .header-inner { padding: var(--space-md); flex-direction: column; gap: var(--space-sm); }
+  .sidebar { grid-template-columns: 1fr; }
+  .action-bar { flex-direction: column; }
+  .avatar, .avatar-placeholder { width: 72px; height: 72px; font-size: 28px; }
+  .username { font-size: 22px; }
 }
 </style>

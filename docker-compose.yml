@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gin-demo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./sql/public.sql:/docker-entrypoint-initdb.d/01-public.sql:ro
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: gin-demo-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./go-serve
+      dockerfile: Dockerfile
+    container_name: gin-demo-backend
+    restart: unless-stopped
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_DB: ${PG_DB}
+      REDIS_ADDR: redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      ALIYUN_API_KEY: ${ALIYUN_API_KEY}
+      ALIYUN_BASE_URL: ${ALIYUN_BASE_URL}
+      OpenAIModel: ${OpenAIModel}
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./vue-demo
+      dockerfile: Dockerfile
+    container_name: gin-demo-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  pg_data:

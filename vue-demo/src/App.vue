@@ -1,11 +1,6 @@
 <template>
   <div id="app">
-    <header >
-
-    </header>
-    <main>
-      <router-view />
-    </main>
+    <router-view />
   </div>
 </template>
 
@@ -15,176 +10,161 @@ import { clearExpiredToken } from '@/utils/token'
 export default {
   name: 'App',
   created() {
-    // 应用启动时检查并清除过期的 Token
     clearExpiredToken()
   }
 }
 </script>
 
 <style>
-/* Global Glassmorphism Flowing Style */
+/* ═══════════════════════════════════════════════════════════════════════
+   Premium Aurora Glass — Global Foundation
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Glass tokens */
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.12);
+  --glass-bg-active: rgba(255, 255, 255, 0.16);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-border-bright: rgba(255, 255, 255, 0.25);
+  --glass-blur: blur(20px);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --glass-shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.3);
+  --glass-radius: 20px;
+  --glass-radius-sm: 14px;
+  --glass-radius-xs: 10px;
+
+  /* Accent palette */
+  --accent-primary: #818cf8;
+  --accent-secondary: #a78bfa;
+  --accent-glow: rgba(129, 140, 248, 0.4);
+  --accent-gradient: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+  --accent-gradient-soft: linear-gradient(135deg, rgba(129, 140, 248, 0.3) 0%, rgba(167, 139, 250, 0.3) 100%);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: rgba(241, 245, 249, 0.7);
+  --text-tertiary: rgba(241, 245, 249, 0.45);
+  --text-on-accent: #ffffff;
+
+  /* Semantic */
+  --danger: #f87171;
+  --danger-glow: rgba(248, 113, 113, 0.3);
+  --success: #34d399;
+  --success-glow: rgba(52, 211, 153, 0.3);
+  --warning: #fbbf24;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+}
+
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  margin: 0;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Outfit', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Fluid glowing background */
-  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 20%, #a1c4fd 50%, #c2e9fb 80%, #8fd3f4 100%);
-  background-size: 400% 400%;
-  animation: gradientFlow 15s ease infinite;
+  color: var(--text-primary);
   min-height: 100vh;
-  color: #2c3e50;
+  overflow-x: hidden;
+
+  /* Deep aurora gradient background */
+  background: #0c0a1d;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(99, 102, 241, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 15%, rgba(168, 85, 247, 0.2) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 50% 80%, rgba(59, 130, 246, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 75% 60%, rgba(236, 72, 153, 0.12) 0%, transparent 50%);
+  background-attachment: fixed;
 }
 
-@keyframes gradientFlow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Animated floating orbs */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+  pointer-events: none;
+  animation: floatOrb 20s ease-in-out infinite;
 }
 
-:root {
-  --glass-bg: rgba(255, 255, 255, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --glass-blur: blur(16px);
-  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+body::before {
+  width: 500px;
+  height: 500px;
+  background: rgba(99, 102, 241, 0.15);
+  top: -100px;
+  left: -100px;
+  animation-delay: 0s;
 }
 
-/* Force specific containers to be transparent so the body background shows through */
-#app,
-#app .page,
-#app .home-page,
-#app .ai-chat-container,
-#app .create-post-container,
-#app .post-detail-page,
-#app .container,
-#app .profile-container,
-#app .main-content,
-#app main.main-content {
-  background: transparent !important;
+body::after {
+  width: 400px;
+  height: 400px;
+  background: rgba(168, 85, 247, 0.12);
+  bottom: -80px;
+  right: -80px;
+  animation-delay: -10s;
 }
 
-/* Apply Glassmorphism to core UI elements */
-#app .card,
-#app .post-card,
-#app .navbar,
-#app .chat-window,
-#app .chat-history,
-#app .chat-input-area,
-#app .message-item,
-#app .message-content,
-#app .empty-state,
-#app .form-wrapper,
-#app .sidebar-card,
-#app .modal,
-#app .info-card,
-#app .profile-section,
-#app .post-detail,
-#app .category,
-#app .tag,
-#app .post-footer,
-#app .action-btn {
-  background: var(--glass-bg) !important;
-  backdrop-filter: var(--glass-blur) !important;
-  -webkit-backdrop-filter: var(--glass-blur) !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--glass-shadow) !important;
-  border-radius: 16px !important;
-  color: #1e293b !important;
+@keyframes floatOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(60px, -40px) scale(1.1); }
+  50% { transform: translate(-30px, 50px) scale(0.95); }
+  75% { transform: translate(40px, 30px) scale(1.05); }
 }
 
-/* Slightly tweak specific elements for better UI */
-#app .navbar {
-  border-radius: 0 0 16px 16px !important;
-  margin-bottom: 20px;
+#app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
 }
 
-/* Input & Textarea Glass */
-#app input,
-#app textarea,
-#app select {
-  background: rgba(255, 255, 255, 0.3) !important;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  border-radius: 12px !important;
-  color: #0f172a !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  padding: 10px 14px;
+/* ═══════════════════════════════════════════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
-#app input:focus,
-#app textarea:focus,
-#app select:focus {
-  outline: none !important;
-  background: rgba(255, 255, 255, 0.5) !important;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6) !important;
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   Selection
+   ═══════════════════════════════════════════════════════════════════════ */
 
-#app input::placeholder,
-#app textarea::placeholder {
-  color: rgba(15, 23, 42, 0.5) !important;
-}
-
-/* Button Glassmorphism */
-#app button,
-#app .btn-primary,
-#app .btn-secondary,
-#app .btn-outline {
-  background: rgba(255, 255, 255, 0.4) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  color: #1e293b !important;
-  font-weight: 600 !important;
-  border-radius: 12px !important;
-  transition: all 0.3s ease !important;
-}
-
-#app button:hover,
-#app .btn-primary:hover,
-#app .btn-secondary:hover,
-#app .btn-outline:hover {
-  background: rgba(255, 255, 255, 0.6) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1) !important;
-}
-
-#app button:disabled {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: rgba(30, 41, 59, 0.5) !important;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-/* Text glow to ensure readability */
-#app h1, #app h2, #app h3, #app .navbar-brand {
-  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.6) !important;
-  color: #1a202c !important;
-}
-
-/* Code & Pre Blocks */
-#app .content-body code,
-#app .content-body pre,
-#app .content-body blockquote {
-  background: rgba(255, 255, 255, 0.3) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  border-left: 4px solid rgba(255, 255, 255, 0.8) !important; /* For blockquotes */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-  color: #1e293b !important;
-}
-
-#app .content-body pre {
-  border-left: 1px solid rgba(255, 255, 255, 0.5) !important;
-}
-
-/* Active Nav Links */
-#app .nav-link.active {
-  background: rgba(255, 255, 255, 0.6) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+::selection {
+  background: rgba(129, 140, 248, 0.4);
+  color: #fff;
 }
 </style>

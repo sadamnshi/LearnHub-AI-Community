@@ -1,114 +1,104 @@
 <template>
   <div class="home-page">
-    <!-- 顶部导航栏 -->
-   <header class="navbar">
-      <div class="navbar-brand">📚 LearnHub</div>
-      <nav class="navbar-nav">
-        <router-link to="/" class="nav-link active">首页</router-link>
-         <!-- 已登录显示"个人中心"，未登录显示"登录" -->
-        <template v-if="isLoggedIn">
-          <router-link to="/profile" class="nav-link">👤 {{ username }}</router-link>
-          <button @click="handleLogout" class="btn-logout">退出</button>
-        </template>
-        <template v-else>
-          <router-link to="/login" class="nav-link btn-primary">登录</router-link>
-          <router-link to="/register" class="nav-link btn-outline">注册</router-link>
-        </template>
-      </nav>
+    <!-- Glass Navbar -->
+    <header class="navbar">
+      <div class="navbar-inner">
+        <router-link to="/" class="navbar-brand">
+          <span class="brand-icon"> </span>
+          <span class="brand-text">LearnHub</span>
+        </router-link>
+        <nav class="navbar-nav">
+          <router-link to="/" class="nav-link active">首页</router-link>
+          <template v-if="isLoggedIn">
+            <router-link to="/profile" class="nav-link">{{ username }}</router-link>
+            <button @click="handleLogout" class="btn-ghost">退出</button>
+          </template>
+          <template v-else>
+            <router-link to="/login" class="nav-link btn-accent">登录</router-link>
+            <router-link to="/register" class="nav-link btn-glass-outline">注册</router-link>
+          </template>
+        </nav>
+      </div>
     </header>
 
-    <!-- 主体内容 -->
+    <!-- Main Content -->
     <main class="main-content">
-      <!-- 页面标题 -->
       <div class="page-header">
-        <h1>最新帖子</h1>
+        <div>
+          <h1 class="page-title">最新帖子</h1>
+          <p class="page-subtitle">探索社区最新动态与知识分享</p>
+        </div>
         <div class="header-actions" v-if="isLoggedIn">
-          <router-link to="/ai-chat" class="btn-secondary">
-            🤖 AI助手
+          <router-link to="/ai-chat" class="btn-glass">
+            <span class="btn-icon">✨</span> AI 助手
           </router-link>
-          <router-link to="/post/create" class="btn-primary">
-            ✏️ 发布帖子
+          <router-link to="/post/create" class="btn-accent">
+            <span class="btn-icon">✏️</span> 发布帖子
           </router-link>
         </div>
       </div>
 
-      <!-- 加载状态 -->
+      <!-- Loading -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <span>加载中...</span>
       </div>
 
-      <!-- 错误状态 -->
-      <div v-if="error" class="error-state">
-        ⚠️ {{ error }}
-        <button @click="loadPosts">重试</button>
+      <!-- Error -->
+      <div v-if="error" class="error-state glass-card">
+        <span class="error-icon">⚠️</span>
+        {{ error }}
+        <button class="btn-glass-sm" @click="loadPosts">重试</button>
       </div>
 
-      <!-- 帖子列表 -->
+      <!-- Post List -->
       <div v-if="!loading && !error" class="post-list">
-        <!-- 空状态 -->
-        <div v-if="posts.length === 0" class="empty-state">
-          <p>暂无帖子，<router-link to="/post/create">来发第一篇吧</router-link></p>
+        <div v-if="posts.length === 0" class="empty-state glass-card">
+          <div class="empty-icon"> </div>
+          <p>暂无帖子</p>
+          <router-link to="/post/create" class="btn-accent-sm">来发第一篇吧</router-link>
         </div>
 
-        <!-- 帖子卡片 -->
         <article
-          v-for="post in posts"
+          v-for="(post, index) in posts"
           :key="post.id"
-          class="post-card"
+          class="post-card glass-card"
+          :style="{ animationDelay: `${index * 60}ms` }"
           @click="goToPost(post.id)"
         >
-          <!-- 置顶标记 -->
           <span v-if="post.is_pinned" class="badge-pinned">📌 置顶</span>
 
           <div class="post-card-body">
             <h2 class="post-title">{{ post.title }}</h2>
             <p class="post-summary">{{ post.summary }}</p>
-
-            <!-- 标签 -->
             <div class="post-tags" v-if="post.tags && post.tags.length">
-              <span
-                v-for="tag in post.tags"
-                :key="tag.id"
-                class="tag"
-              ># {{ tag.name }}</span>
+              <span v-for="tag in post.tags" :key="tag.id" class="tag"># {{ tag.name }}</span>
             </div>
           </div>
 
           <footer class="post-card-footer">
-            <!-- 作者信息 -->
             <div class="post-author">
-              <img
-                :src="post.author.avatar || defaultAvatar"
-                :alt="post.author.username"
-                class="avatar"
-              />
+              <img :src="post.author.avatar || defaultAvatar" :alt="post.author.username" class="avatar" />
               <span>{{ post.author.username }}</span>
             </div>
-
-            <!-- 分类 -->
             <span v-if="post.category && post.category.name" class="category-badge">
               {{ post.category.icon }} {{ post.category.name }}
             </span>
-
-            <!-- 统计数字 -->
             <div class="post-stats">
               <span>👁 {{ post.view_count }}</span>
               <span>👍 {{ post.like_count }}</span>
               <span>💬 {{ post.comment_count }}</span>
             </div>
-
-            <!-- 发布时间 -->
             <span class="post-time">{{ formatTime(post.created_at) }}</span>
           </footer>
         </article>
       </div>
 
-      <!-- 分页 -->
+      <!-- Pagination -->
       <div v-if="total > pageSize" class="pagination">
-        <button :disabled="page <= 1" @click="changePage(page - 1)">上一页</button>
-        <span>第 {{ page }} 页 / 共 {{ totalPages }} 页（{{ total }} 篇）</span>
-        <button :disabled="page >= totalPages" @click="changePage(page + 1)">下一页</button>
+        <button class="btn-glass-sm" :disabled="page <= 1" @click="changePage(page - 1)">上一页</button>
+        <span class="page-info">第 {{ page }} 页 / 共 {{ totalPages }} 页（{{ total }} 篇）</span>
+        <button class="btn-glass-sm" :disabled="page >= totalPages" @click="changePage(page + 1)">下一页</button>
       </div>
     </main>
   </div>
@@ -122,63 +112,41 @@ export default {
   name: 'HomeView',
   data() {
     return {
-      posts: [],       // 当前页帖子列表
-      total: 0,        // 总条数
-      page: 1,         // 当前页码
-      pageSize: 5,    // 每页条数
+      posts: [],
+      total: 0,
+      page: 1,
+      pageSize: 5,
       loading: false,
       error: '',
       defaultAvatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=default',
-      // 使用响应式数据存储登录状态，而不仅依赖 localStorage
       authToken: '',
       currentUsername: ''
     }
   },
   computed: {
-    // 判断是否已登录
-    isLoggedIn() {
-      return !!this.authToken
-    },
-    // 获取用户名
-    username() {
-      return this.currentUsername || '我'
-    },
-    // 总页数
-    totalPages() {
-      return Math.ceil(this.total / this.pageSize)
-    }
+    isLoggedIn() { return !!this.authToken },
+    username() { return this.currentUsername || '我' },
+    totalPages() { return Math.ceil(this.total / this.pageSize) }
   },
   mounted() {
-    // 初始化登录状态：从 localStorage 读取
     this.authToken = localStorage.getItem('auth_token') || ''
     this.currentUsername = localStorage.getItem('username') || ''
-    
-    // 输出日志用于调试
-    console.log('HomeView mounted:', { authToken: this.authToken, currentUsername: this.currentUsername })
-    
-    // 监听 storage 变化（来自其他标签页或窗口）
-    // 使用箭头函数确保 this 指向组件实例
-    this._onStorageChange = (event) => this.onStorageChange(event)
-    this._onLoginSuccess = (event) => this.onLoginSuccess(event)
-    
+    this._onStorageChange = (e) => this.onStorageChange(e)
+    this._onLoginSuccess = (e) => this.onLoginSuccess(e)
     window.addEventListener('storage', this._onStorageChange)
     window.addEventListener('login-success', this._onLoginSuccess)
-    
     this.loadPosts()
   },
   beforeUnmount() {
-    // 组件卸载时移除事件监听
     window.removeEventListener('storage', this._onStorageChange)
     window.removeEventListener('login-success', this._onLoginSuccess)
   },
   methods: {
-    // 加载帖子列表
     async loadPosts() {
       this.loading = true
       this.error = ''
       try {
         const res = await getPostList({ page: this.page, page_size: this.pageSize })
-        // 后端统一响应格式：{ code: 0, data: { list, total, page, page_size } }
         if (res.code === 0) {
           this.posts = res.data.list || []
           this.total = res.data.total || 0
@@ -191,62 +159,36 @@ export default {
         this.loading = false
       }
     },
-
-    // 切换页码
     changePage(newPage) {
       this.page = newPage
       this.loadPosts()
-      // 滚动到顶部
       window.scrollTo({ top: 0, behavior: 'smooth' })
     },
-
-    // 跳转帖子详情
-    goToPost(id) {
-      this.$router.push(`/posts/${id}`)
-    },
-
-    // 退出登录
+    goToPost(id) { this.$router.push(`/posts/${id}`) },
     handleLogout() {
       logout()
-      // 清空本地状态
       this.authToken = ''
       this.currentUsername = ''
-      // 退出后刷新页面（首页是公开的，刷新即可）
       this.$router.go(0)
     },
-
-    // 监听 localStorage 变化
-    onStorageChange(event) {
-      console.log('Storage changed:', event.key, event.newValue)
-      if (event.key === 'auth_token') {
-        this.authToken = event.newValue || ''
-      }
-      if (event.key === 'username') {
-        this.currentUsername = event.newValue || ''
-      }
+    onStorageChange(e) {
+      if (e.key === 'auth_token') this.authToken = e.newValue || ''
+      if (e.key === 'username') this.currentUsername = e.newValue || ''
     },
-
-    // 监听登录成功事件
-    onLoginSuccess(event) {
-      console.log('Login success event received:', event.detail)
-      const { token, user } = event.detail
+    onLoginSuccess(e) {
+      const { token, user } = e.detail
       this.authToken = token || ''
       this.currentUsername = user?.username || ''
     },
-
-    // 格式化时间：显示为"X 分钟前"或日期
     formatTime(isoString) {
       if (!isoString) return ''
       const date = new Date(isoString)
       const now = new Date()
-      const diff = Math.floor((now - date) / 1000) // 秒差
-
+      const diff = Math.floor((now - date) / 1000)
       if (diff < 60) return '刚刚'
       if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
       if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
       if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} 天前`
-
-      // 超过 7 天显示完整日期
       return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
     }
   }
@@ -254,146 +196,281 @@ export default {
 </script>
 
 <style scoped>
-/* ========== 导航栏 ========== */
+/* ═══════════════════════════════════════════════════════════════════════
+   Navbar
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .navbar {
   position: sticky;
   top: 0;
   z-index: 100;
+  background: rgba(12, 10, 29, 0.6);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.navbar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 60px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 0 var(--space-lg);
+  height: 64px;
 }
 
 .navbar-brand {
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-primary);
   font-weight: 700;
-  color: #1a73e8;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+
+.brand-icon {
+  font-size: 24px;
+}
+
+.brand-text {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .navbar-nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
 .nav-link {
   text-decoration: none;
-  color: #555;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: background 0.2s;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  border-radius: var(--glass-radius-xs);
   font-size: 14px;
+  font-weight: 500;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
 .nav-link:hover,
 .nav-link.active {
-  background: #f0f4ff;
-  color: #1a73e8;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.btn-primary {
-  background: #1a73e8;
-  color: #fff !important;
-  padding: 6px 16px;
-  border-radius: 6px;
+/* ═══════════════════════════════════════════════════════════════════════
+   Buttons
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   text-decoration: none;
+  color: var(--text-on-accent);
+  background: var(--accent-gradient);
+  padding: 9px 18px;
+  border-radius: var(--glass-radius-xs);
   font-size: 14px;
-  cursor: pointer;
+  font-weight: 600;
   border: none;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-spring);
+  box-shadow: 0 4px 16px var(--accent-glow);
 }
 
-.btn-primary:hover {
-  background: #1558b0;
+.btn-accent:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px var(--accent-glow);
 }
 
-.btn-outline {
-  border: 1px solid #1a73e8;
-  color: #1a73e8 !important;
-  padding: 5px 15px;
-  border-radius: 6px;
+.btn-accent-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   text-decoration: none;
-  font-size: 14px;
+  color: var(--text-on-accent);
+  background: var(--accent-gradient);
+  padding: 7px 14px;
+  border-radius: var(--glass-radius-xs);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-spring);
 }
 
-.btn-logout {
+.btn-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  padding: 9px 18px;
+  border-radius: var(--glass-radius-xs);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.btn-glass:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-bright);
+  transform: translateY(-1px);
+}
+
+.btn-glass-sm {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  padding: 7px 14px;
+  border-radius: var(--glass-radius-xs);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  font-family: inherit;
+}
+
+.btn-glass-sm:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-bright);
+  transform: translateY(-1px);
+}
+
+.btn-glass-sm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-glass-outline {
+  text-decoration: none;
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+  padding: 7px 16px;
+  border-radius: var(--glass-radius-xs);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+}
+
+.btn-glass-outline:hover {
+  color: var(--text-primary);
+  border-color: var(--glass-border-bright);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-ghost {
   background: none;
-  border: 1px solid #ddd;
-  color: #888;
-  padding: 5px 12px;
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 7px 14px;
+  border-radius: var(--glass-radius-xs);
   cursor: pointer;
   font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all var(--duration-normal) var(--ease-out-expo);
 }
 
-.btn-logout:hover {
-  border-color: #f56565;
-  color: #f56565;
+.btn-ghost:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-glow);
 }
 
-/* ========== 主体内容 ========== */
+.btn-icon {
+  font-size: 15px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Main Content
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .main-content {
-  max-width: 860px;
-  margin: 32px auto;
-  padding: 0 16px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
 }
 
 .page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-xl);
 }
 
-.page-header h1 {
-  font-size: 22px;
-  color: #222;
-  margin: 0;
+.page-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  color: var(--text-tertiary);
+  font-size: 15px;
+  margin-top: 6px;
+  font-weight: 400;
 }
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
+  flex-shrink: 0;
 }
 
-.btn-secondary {
-  background: #9c27b0;
-  color: #fff !important;
-  padding: 8px 16px;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 14px;
-  cursor: pointer;
-  border: none;
-  transition: background 0.2s;
+/* ═══════════════════════════════════════════════════════════════════════
+   Glass Card Base
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
 }
 
-.btn-secondary:hover {
-  background: #7b1fa2;
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   States
+   ═══════════════════════════════════════════════════════════════════════ */
 
-/* ========== 状态 ========== */
 .loading-state {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #888;
-  padding: 40px 0;
   justify-content: center;
+  gap: 12px;
+  color: var(--text-tertiary);
+  padding: 80px 0;
+  font-size: 15px;
 }
 
 .spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #ddd;
-  border-top-color: #1a73e8;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
@@ -401,66 +478,98 @@ export default {
 }
 
 .error-state {
-  text-align: center;
-  padding: 32px;
-  color: #e53e3e;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-lg);
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.error-icon {
+  font-size: 18px;
 }
 
 .empty-state {
   text-align: center;
-  padding: 60px 0;
-  color: #aaa;
-  font-size: 15px;
+  padding: var(--space-2xl);
+  color: var(--text-tertiary);
 }
 
-/* ========== 帖子卡片 ========== */
+.empty-icon {
+  font-size: 56px;
+  margin-bottom: var(--space-md);
+  opacity: 0.6;
+}
+
+.empty-state p {
+  margin-bottom: var(--space-md);
+  font-size: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Post Cards
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .post-card {
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 10px;
-  padding: 20px;
+  padding: var(--space-lg);
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.15s;
   position: relative;
+  transition: all var(--duration-slow) var(--ease-out-expo);
+  animation: fadeInUp var(--duration-slow) var(--ease-out-expo) both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .post-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-bright);
+  transform: translateY(-3px);
+  box-shadow: var(--glass-shadow-hover), 0 0 0 1px rgba(129, 140, 248, 0.1);
 }
 
 .badge-pinned {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: var(--space-md);
+  right: var(--space-md);
   font-size: 12px;
-  color: #e67e22;
-  background: #fff8f0;
-  padding: 2px 8px;
-  border-radius: 4px;
-  border: 1px solid #f0d0a0;
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.12);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  font-weight: 500;
 }
 
 .post-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
   margin: 0 0 8px;
   line-height: 1.4;
+  letter-spacing: -0.2px;
 }
 
 .post-summary {
   font-size: 14px;
-  color: #666;
-  line-height: 1.6;
-  margin: 0 0 12px;
-  /* 最多显示 3 行 */
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 14px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
@@ -472,15 +581,17 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .tag {
   font-size: 12px;
-  color: #1a73e8;
-  background: #e8f0fe;
-  padding: 2px 8px;
-  border-radius: 12px;
+  color: var(--accent-primary);
+  background: rgba(129, 140, 248, 0.1);
+  border: 1px solid rgba(129, 140, 248, 0.15);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 500;
 }
 
 .post-card-footer {
@@ -489,17 +600,16 @@ export default {
   gap: 16px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #888;
-  border-top: 1px solid #f0f0f0;
+  color: var(--text-tertiary);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 12px;
-  margin-top: 4px;
 }
 
 .post-author {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #555;
+  gap: 8px;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -508,54 +618,65 @@ export default {
   height: 24px;
   border-radius: 50%;
   object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .category-badge {
-  background: #f5f5f5;
-  padding: 2px 10px;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 10px;
+  border-radius: 8px;
   font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .post-stats {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   margin-left: auto;
 }
 
 .post-time {
   font-size: 12px;
-  color: #bbb;
+  color: var(--text-tertiary);
 }
 
-/* ========== 分页 ========== */
+/* ═══════════════════════════════════════════════════════════════════════
+   Pagination
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .pagination {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-top: 32px;
-  padding-bottom: 40px;
-  color: #555;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+  padding-bottom: var(--space-2xl);
+}
+
+.page-info {
+  color: var(--text-tertiary);
   font-size: 14px;
 }
 
-.pagination button {
-  padding: 6px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.2s;
+/* ═══════════════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .navbar-inner { padding: 0 var(--space-md); }
+  .main-content { padding: var(--space-lg) var(--space-md); }
+  .page-header { flex-direction: column; align-items: flex-start; gap: var(--space-md); }
+  .page-title { font-size: 26px; }
+  .post-card { padding: var(--space-md); }
+  .post-card-footer { gap: 10px; font-size: 12px; }
+  .post-stats { margin-left: 0; }
+  .header-actions { width: 100%; }
 }
 
-.pagination button:hover:not(:disabled) {
-  border-color: #1a73e8;
-  color: #1a73e8;
-}
-
-.pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+@media (max-width: 480px) {
+  .navbar-nav { gap: 4px; }
+  .nav-link { padding: 6px 10px; font-size: 13px; }
+  .brand-text { font-size: 17px; }
+  .post-title { font-size: 16px; }
 }
 </style>
