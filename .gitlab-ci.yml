@@ -75,7 +75,8 @@ frontend_image:
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    - docker build -f vue-demo/Dockerfile -t "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA" vue-demo
+    - export DOCKER_BUILDKIT=1
+    - docker build --cache-from "$FRONTEND_IMAGE:latest" -f vue-demo/Dockerfile -t "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA" vue-demo
     - docker push "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA"
     - |
       if [ "$CI_COMMIT_BRANCH" = "main" ]; then
@@ -93,7 +94,8 @@ backend_image:
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    - docker build -f go-serve/Dockerfile -t "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA" go-serve
+    - export DOCKER_BUILDKIT=1
+    - docker build --cache-from "$BACKEND_IMAGE:latest" -f go-serve/Dockerfile -t "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA" .
     - docker push "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA"
     - |
       if [ "$CI_COMMIT_BRANCH" = "main" ]; then
