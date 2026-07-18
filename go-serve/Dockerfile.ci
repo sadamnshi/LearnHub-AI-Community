@@ -1,0 +1,13 @@
+FROM docker.m.daocloud.io/library/alpine:3.20 AS certs
+RUN apk add --no-cache ca-certificates
+
+FROM scratch
+
+WORKDIR /app
+
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY build/gin-demo /app/gin-demo
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/gin-demo"]

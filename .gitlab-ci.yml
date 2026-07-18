@@ -12,7 +12,10 @@ stages:
 variables:
   GOMODCACHE: $CI_PROJECT_DIR/.cache/go/pkg/mod
   GOCACHE: $CI_PROJECT_DIR/.cache/go/build
+  GOPROXY: https://goproxy.cn,direct
+  CGO_ENABLED: "0"
   NPM_CONFIG_CACHE: $CI_PROJECT_DIR/.cache/npm
+  NPM_CONFIG_REGISTRY: https://registry.npmmirror.com
   BACKEND_IMAGE: $CI_REGISTRY_IMAGE/backend
   FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend
 
@@ -37,7 +40,7 @@ frontend_build:
       - .cache/npm/
   script:
     - cd vue-demo
-    - if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi
+    - if [ -f package-lock.json ]; then npm ci --include=dev --prefer-offline --no-audit; else npm install --include=dev --prefer-offline --no-audit; fi
     - npm run build
   artifacts:
     name: frontend-dist-$CI_COMMIT_SHORT_SHA
@@ -58,28 +61,40 @@ go_build:
     - cd go-serve
     - go mod download
     - mkdir -p build
-    - go build -o build/gin-demo ./main.go
+    - GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o build/gin-demo .
   artifacts:
     name: backend-bin-$CI_COMMIT_SHORT_SHA
     paths:
       - go-serve/build/
     expire_in: 7 days
 
-frontend_image:
+.docker_package:
   stage: package
   image: docker.m.daocloud.io/library/docker:27
-  needs:
-    - frontend_build
+  services:
+    - name: docker.m.daocloud.io/library/docker:27-dind
+      alias: docker
+      command: ["--registry-mirror=https://docker.m.daocloud.io"]
   variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+  before_script:
+    - docker version
+    - test -n "$CI_REGISTRY" || (echo "CI_REGISTRY is empty. Please enable Container Registry." && exit 1)
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+frontend_image:
+  extends: .docker_package
+  needs:
+    - job: frontend_build
+      artifacts: true
   rules:
     - if: $CI_COMMIT_BRANCH
-  before_script:
-    - echo "=== DEBUG DOCKER_HOST ===" && echo "DOCKER_HOST=$DOCKER_HOST" && ls -la /var/run/docker.sock 2>&1 && env | grep -i docker
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - export DOCKER_BUILDKIT=1
-    - docker build --cache-from "$FRONTEND_IMAGE:latest" -f vue-demo/Dockerfile -t "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA" vue-demo
+    - test -d vue-demo/dist || (echo "vue-demo/dist artifact is missing" && exit 1)
+    - docker build --pull -f vue-demo/Dockerfile.ci -t "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA" vue-demo
     - docker push "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA"
     - |
       if [ "$CI_COMMIT_BRANCH" = "main" ]; then
@@ -88,20 +103,16 @@ frontend_image:
       fi
 
 backend_image:
-  stage: package
-  image: docker.m.daocloud.io/library/docker:27
+  extends: .docker_package
   needs:
-    - go_build
-  variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
+    - job: go_build
+      artifacts: true
   rules:
     - if: $CI_COMMIT_BRANCH
-  before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    - echo "DOCKER_HOST=$DOCKER_HOST" && ls -la /var/run/docker.sock 2>&1 && docker info 2>&1 | head -5
     - export DOCKER_BUILDKIT=1
-    - docker build --cache-from "$BACKEND_IMAGE:latest" -f go-serve/Dockerfile -t "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - test -f go-serve/build/gin-demo || (echo "go-serve/build/gin-demo artifact is missing" && exit 1)
+    - docker build --pull -f go-serve/Dockerfile.ci -t "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA" go-serve
     - docker push "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA"
     - |
       if [ "$CI_COMMIT_BRANCH" = "main" ]; then
@@ -129,7 +140,7 @@ deploy_ubuntu:
     - >
       ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST"
       "cd '$DEPLOY_PATH' &&
-      echo '$REGISTRY_PASSWORD' | docker login -u '$REGISTRY_USER' --password-stdin '$CI_REGISTRY' &&
+      echo '$CI_REGISTRY_PASSWORD' | docker login -u '$CI_REGISTRY_USER' --password-stdin '$CI_REGISTRY' &&
       export BACKEND_IMAGE='$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA' FRONTEND_IMAGE='$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA' &&
       docker compose -f docker-compose.prod.yml pull &&
       docker compose -f docker-compose.prod.yml up -d &&
