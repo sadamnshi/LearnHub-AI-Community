@@ -70,6 +70,8 @@ frontend_image:
   image: docker.m.daocloud.io/library/docker:27
   needs:
     - frontend_build
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
   rules:
     - if: $CI_COMMIT_BRANCH
   before_script:
@@ -89,6 +91,8 @@ backend_image:
   image: docker.m.daocloud.io/library/docker:27
   needs:
     - go_build
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
   rules:
     - if: $CI_COMMIT_BRANCH
   before_script:
