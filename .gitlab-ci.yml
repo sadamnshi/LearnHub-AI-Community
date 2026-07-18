@@ -75,6 +75,7 @@ frontend_image:
   rules:
     - if: $CI_COMMIT_BRANCH
   before_script:
+    - echo "=== DEBUG DOCKER_HOST ===" && echo "DOCKER_HOST=$DOCKER_HOST" && ls -la /var/run/docker.sock 2>&1 && env | grep -i docker
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - export DOCKER_BUILDKIT=1
