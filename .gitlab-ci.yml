@@ -99,6 +99,7 @@ backend_image:
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
+    - echo "DOCKER_HOST=$DOCKER_HOST" && ls -la /var/run/docker.sock 2>&1 && docker info 2>&1 | head -5
     - export DOCKER_BUILDKIT=1
     - docker build --cache-from "$BACKEND_IMAGE:latest" -f go-serve/Dockerfile -t "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA" .
     - docker push "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA"
